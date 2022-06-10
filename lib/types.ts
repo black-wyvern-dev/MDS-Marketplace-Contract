@@ -3,6 +3,7 @@ import {PublicKey} from '@solana/web3.js';
 
 export const GLOBAL_AUTHORITY_SEED = "global-authority-v1";
 export const SELL_DATA_SEED = "sell-info-v1";
+export const SELL_DATA_SIZE = 126;
 
 export const MARKETPLACE_PROGRAM_ID = new PublicKey("5bw4QGFgrxigxxP5m3S7v7fZoF9a1F2QAMnxjhMjZKfR");
 

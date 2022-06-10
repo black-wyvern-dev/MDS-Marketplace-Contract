@@ -14,7 +14,7 @@ import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 import { GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, SellData, SELL_DATA_SEED } from '../lib/types';
 import {IDL as MarketplaceIDL} from '../lib/mds_marketplace';
-import { createDelistNftTx, createInitializeTx, createInitSellDataTx, createListForSellNftTx, getGlobalState, getNFTPoolState } from '../lib/scripts';
+import { createDelistNftTx, createInitializeTx, createInitSellDataTx, createListForSellNftTx, getAllListedNFTs, getGlobalState, getNFTPoolState } from '../lib/scripts';
 
 // GlobalAuthority:  FXp1QUeR2jkdKSDvQUTLM7WmZKQmzNtLCJeNG5sqqt4r
 // RewardVault:  3F72kmHZEKcBddig9FyptWSWBRjEr6dwAkjnqZPrxqiZ
@@ -168,4 +168,8 @@ export const getGlobalInfo = async () => {
     };
 
     return result;
+}
+
+export const getAllNFTs = async (rpc?: string) => {
+    return await getAllListedNFTs(solConnection, rpc);
 }

@@ -12,6 +12,7 @@ import {
   getNFTPoolInfo,
   listNftForSale,
   delistNft,
+  getAllNFTs,
 } from "./scripts";
 
 dotenv.config({ path: __dirname+'/../.env' });
@@ -92,6 +93,21 @@ programCommand('listed_nft_data')
       return;
     }
     console.log(await getNFTPoolInfo(new PublicKey(address)));
+});
+
+programCommand('get_all_listed_nfts')
+  .option('-r, --rpc <string>', 'custom rpc url')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .action(async (directory, cmd) => {
+    const {
+      env,
+      rpc,
+    } = cmd.opts();
+
+    console.log('Solana config: ', env);
+    await setClusterConfig(env);
+
+    console.log(await getAllNFTs(rpc));
 });
 
 programCommand('init')

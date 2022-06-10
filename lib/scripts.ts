@@ -13,6 +13,7 @@ import {
     GlobalPool,
     SellData,
     SELL_DATA_SEED,
+    SELL_DATA_SIZE,
 } from './types';
 import {
     getAssociatedTokenAccount,
@@ -41,6 +42,72 @@ export const getNFTPoolState = async (
         return null;
     }
 }
+
+/** Get all registered NFTs info for max stake amount calculation */
+export const getAllListedNFTs = async (connection: Connection, rpcUrl: string | undefined) => {
+    let solConnection = connection;
+
+    if (rpcUrl) {
+        solConnection = new anchor.web3.Connection(rpcUrl, "confirmed");
+    }
+
+    let poolAccounts = await solConnection.getProgramAccounts(
+      MARKETPLACE_PROGRAM_ID,
+      {
+        filters: [
+          {
+            dataSize: SELL_DATA_SIZE,
+          },
+        ]
+      }
+    );
+
+    console.log(`Encounter ${poolAccounts.length} NFT Data Accounts`);
+
+    let result: SellData[] = [];
+
+    try {
+        for (let idx = 0; idx < poolAccounts.length; idx++) {
+            let data = poolAccounts[idx].account.data;
+            const mint = new PublicKey(data.slice(8, 40));
+
+            let seller = new PublicKey(data.slice(40, 72));
+
+            let collection = new PublicKey(data.slice(72, 104));
+
+            let buf = data.slice(104, 112).reverse();
+            let price = (new anchor.BN(buf));
+
+            buf = data.slice(112, 120).reverse();
+            let active = (new anchor.BN(buf));
+
+            if (active.toNumber() == 1)
+                result.push({
+                    mint,
+                    seller,
+                    collection,
+                    price,
+                    active,
+                });
+        }
+    } catch (e) {
+        console.log(e);
+        return {};
+    }
+
+    return {
+        count: result.length,
+        data: result.map((info: SellData) => {
+            return {
+                mint: info.mint.toBase58(),
+                seller: info.seller.toBase58(),
+                collection: info.collection.toBase58(),
+                price: info.price.toNumber(),
+                active: info.active.toNumber(),
+            }
+        })
+    }
+};
 
 export const getGlobalState = async (
     program: anchor.Program,
