@@ -4,8 +4,11 @@ import {
     SystemProgram,
     SYSVAR_RENT_PUBKEY,
     TransactionInstruction,
+    Transaction,
+    Keypair,
 } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, Token, MintLayout } from "@solana/spl-token";
+import { ABB_TOKEN_DECIMAL, ABB_TOKEN_MINT, ESCROW_VAULT_SEED, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID } from './types';
 
 export const METAPLEX = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
@@ -152,3 +155,100 @@ export const getMetadata = async (mint: PublicKey): Promise<PublicKey> => {
         await PublicKey.findProgramAddress([Buffer.from('metadata'), METAPLEX.toBuffer(), mint.toBuffer()], METAPLEX)
     )[0];
 };
+
+export const airdropSOL = async (address: PublicKey, amount: number, connection: Connection) => {
+  try {
+    const txId = await connection.requestAirdrop(address, amount);
+    await connection.confirmTransaction(txId);
+  } catch (e) {
+    console.log('Aridrop Failure', address.toBase58(), amount);
+  }
+}
+
+export const createTokenMint = async (
+  connection: Connection,
+  payer: Keypair,
+  mint: Keypair,
+) => {
+  const ret = await connection.getAccountInfo(mint.publicKey);
+  if(ret && ret.data) {
+      console.log('Token already in use', mint.publicKey.toBase58());
+      return;
+  };
+  // Allocate memory for the account
+  const balanceNeeded = await Token.getMinBalanceRentForExemptMint(
+    connection,
+  );
+  const transaction = new Transaction();
+  transaction.add(
+      SystemProgram.createAccount({
+          fromPubkey: payer.publicKey,
+          newAccountPubkey: mint.publicKey,
+          lamports: balanceNeeded,
+          space: MintLayout.span,
+          programId: TOKEN_PROGRAM_ID,
+      }),
+  );
+  transaction.add(
+      Token.createInitMintInstruction(
+          TOKEN_PROGRAM_ID,
+          mint.publicKey,
+          9,
+          payer.publicKey,
+          payer.publicKey,
+      ),
+  );
+  const txId = await connection.sendTransaction(transaction, [payer, mint]);
+  await connection.confirmTransaction(txId);
+
+  console.log('Tx Hash=', txId);
+}
+
+export const isExistAccount = async (address: PublicKey, connection: Connection) => {
+  try {
+    const res = await connection.getAccountInfo(address);
+    if (res && res.data) return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export const getTokenAccountBalance = async (account: PublicKey, connection: Connection) => {
+  try {
+    const res = await connection.getTokenAccountBalance(account);
+    if (res && res.value) return res.value.uiAmount;
+    return 0;
+  } catch (e) {
+    console.log(e)
+    return 0;
+  }
+}
+
+export const getEscrowBalance = async (connection: Connection) => {
+  const [escrowVault] = await PublicKey.findProgramAddress(
+      [Buffer.from(ESCROW_VAULT_SEED)],
+      MARKETPLACE_PROGRAM_ID,
+  );
+
+  const res = await connection.getBalance(escrowVault);
+
+  const escrowATA = await getAssociatedTokenAccount(escrowVault, ABB_TOKEN_MINT);
+  console.log('Escrow:', escrowVault.toBase58(), 'EscrowATA:', escrowATA.toBase58());
+  const token = await getTokenAccountBalance(escrowATA, connection);
+
+  return {
+    sol: res,
+    token: token * ABB_TOKEN_DECIMAL,
+  }
+}
+
+export const getGlobalNFTBalance = async (mint: PublicKey, connection: Connection) => {
+  const [globalAuthority, _] = await PublicKey.findProgramAddress(
+    [Buffer.from(GLOBAL_AUTHORITY_SEED)],
+    MARKETPLACE_PROGRAM_ID,
+  );
+
+  const globalNFTAcount = await getAssociatedTokenAccount(globalAuthority, mint);
+  console.log('GlobalNFTAccount:', globalNFTAcount.toBase58());
+  return await getTokenAccountBalance(globalNFTAcount, connection);
+}

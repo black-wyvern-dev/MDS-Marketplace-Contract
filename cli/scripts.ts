@@ -2,22 +2,28 @@ import { Program, web3 } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import { Keypair, 
     PublicKey,
-    SystemProgram,
-    SYSVAR_RENT_PUBKEY,
-    Transaction,
-    TransactionInstruction,
-    sendAndConfirmTransaction } from '@solana/web3.js';
-import { Token, TOKEN_PROGRAM_ID, AccountLayout, MintLayout, ASSOCIATED_TOKEN_PROGRAM_ID,  } from "@solana/spl-token";
+} from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
-import { GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, SellData, SELL_DATA_SEED } from '../lib/types';
-import {IDL as MarketplaceIDL} from '../lib/mds_marketplace';
-import { createDelistNftTx, createInitializeTx, createInitSellDataTx, createListForSellNftTx, getAllListedNFTs, getGlobalState, getNFTPoolState } from '../lib/scripts';
+import { GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, SellData, SELL_DATA_SEED, UserData, USER_DATA_SEED } from '../lib/types';
+import {IDL as MarketplaceIDL} from '../target/types/mds_marketplace';
+import {
+    createDelistNftTx,
+    createDepositTx,
+    createInitializeTx,
+    createInitSellDataTx,
+    createInitUserTx,
+    createListForSellNftTx,
+    createPurchaseTx,
+    createWithdrawTx,
+    getAllListedNFTs,
+    getGlobalState,
+    getNFTPoolState,
+    getUserPoolState
+} from '../lib/scripts';
 
-// GlobalAuthority:  FXp1QUeR2jkdKSDvQUTLM7WmZKQmzNtLCJeNG5sqqt4r
-// RewardVault:  3F72kmHZEKcBddig9FyptWSWBRjEr6dwAkjnqZPrxqiZ
 let solConnection = null;
 let payer = null;
 let program: Program = null;
@@ -106,11 +112,69 @@ export const initSellData = async (
     console.log("Your transaction signature", txId);
 }
 
+export const initUserPool = async (
+) => {
+    const tx = await createInitUserTx(payer.publicKey, program);
+    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "finalized");
+    console.log("Your transaction signature", txId);
+}
+
+export const depositEscrow = async (
+    sol: number,
+    token: number,
+) => {
+    let userAddress = payer.publicKey;
+    console.log(userAddress.toBase58(), sol, token);
+
+    const [userPool, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(USER_DATA_SEED), userAddress.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('User Data PDA: ', userPool.toBase58());
+
+    let poolAccount = await solConnection.getAccountInfo(userPool);
+    if (poolAccount === null || poolAccount.data === null) {
+        await initUserPool();
+    }
+
+    const tx = await createDepositTx(userAddress, sol, token, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const withdrawEscrow = async (
+    sol: number,
+    token: number,
+) => {
+    let userAddress = payer.publicKey;
+    console.log(userAddress.toBase58(), sol, token);
+
+    const tx = await createWithdrawTx(userAddress, sol, token, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+    
 export const listNftForSale = async (
     mint: PublicKey,
-    price: number,
+    priceSol: number,
+    priceToken: number,
 ) => {
-    console.log(mint.toBase58(), price);
+    console.log(mint.toBase58(), priceSol, priceToken);
 
     const [sellData, _] = await PublicKey.findProgramAddress(
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
@@ -123,7 +187,7 @@ export const listNftForSale = async (
         await initSellData(mint);
     }
 
-    const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, price);
+    const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, priceSol, priceToken);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -148,6 +212,22 @@ export const delistNft = async (
     console.log("Your transaction signature", txId);
 }
 
+export const purchase = async (
+    mint: PublicKey,
+    byToken: boolean,
+) => {
+    console.log(mint.toBase58(), byToken);
+
+    const tx = await createPurchaseTx(mint, payer.publicKey, byToken, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
 export const getNFTPoolInfo = async (
     mint: PublicKey,
 ) => {
@@ -156,8 +236,23 @@ export const getNFTPoolInfo = async (
       mint: nftData.mint.toBase58(),
       seller: nftData.seller.toBase58(),
       collection: nftData.collection.toBase58(),
-      price: nftData.price.toNumber(),
+      priceSol: nftData.priceSol.toNumber(),
+      priceToken: nftData.priceToken.toNumber(),
+      listedDate: nftData.listedDate.toNumber(),
       active: nftData.active.toNumber(),
+    };
+}
+
+export const getUserPoolInfo = async (
+    userAddress: PublicKey,
+) => {
+    const userData: UserData = await getUserPoolState(userAddress, program);
+    return {
+      address: userData.address.toBase58(),
+      escrowSol: userData.escrowSolBalance.toNumber(),
+      escrowTokenBalance: userData.escrowTokenBalance.toNumber(),
+      tradedVolume: userData.tradedVolume.toNumber(),
+      tradedTokenVolume: userData.tradedTokenVolume.toNumber(),
     };
 }
 
@@ -165,6 +260,8 @@ export const getGlobalInfo = async () => {
     const globalPool: GlobalPool = await getGlobalState(program);
     const result = {
       admin: globalPool.superAdmin.toBase58(),
+      marketFeeSol: globalPool.marketFeeSol.toNumber(),
+      marketFeeToken: globalPool.marketFeeToken.toNumber(),
     };
 
     return result;

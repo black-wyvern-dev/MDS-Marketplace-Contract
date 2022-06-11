@@ -6,62 +6,63 @@ use crate::error::*;
 #[account]
 #[derive(Default)]
 pub struct GlobalPool {
-    // 8 + 32
-    pub super_admin: Pubkey,      // 32
+    // 8 + 376
+    pub super_admin: Pubkey,        // 32
+    pub market_fee_sol: u64,        // 8
+    pub market_fee_token: u64,      // 8
+    pub team_count: u64,            // 8
+    pub team_treasury: [Pubkey; 8], // 8 * 32
+    pub treasury_rate: [u64; 8],    // 8 * 8
 }
 
 #[account]
 #[derive(Default)]
 pub struct SellData {
-    // 8 + 112
+    // 8 + 128
     pub mint: Pubkey,           // 32
     pub seller: Pubkey,         // 32
     pub collection: Pubkey,     // 32
-    pub price: u64,             // 8
+    pub price_sol: u64,         // 8
+    pub price_token: u64,       // 8
+    pub listed_date: i64,       // 8
     pub active: u64,            // 8
 }
 
-// #[zero_copy]
-// #[derive(Default, PartialEq)]
-// pub struct StakedData {
-//     pub mint: Pubkey,      // 32
-//     pub staked_time: i64,  // 8
-// }
+#[account]
+#[derive(Default)]
+pub struct OfferData {
+    // 8 + 96
+    pub mint: Pubkey,               // 32
+    pub buyer: Pubkey,              // 32
+    pub offer_price: u64,           // 8
+    pub offer_listing_date: i64,    // 8
+    pub by_token: u64,              // 8
+    pub active: u64,                // 8
+}
 
-// #[account(zero_copy)]
-// pub struct UserPool {
-//     // 8 + 4048
-//     pub owner: Pubkey,                                 // 32
-//     pub last_reward_time: i64,                         // 8
-//     pub staked_count: u64,                             // 8
-//     // pub staked_mints: [StakedData; STAKE_MAX_COUNT],   // 40 * 100
-// }
+#[account]
+#[derive(Default)]
+pub struct AuctionData {
+    // 8 + 152
+    pub mint: Pubkey,               // 32
+    pub creator: Pubkey,            // 32
+    pub start_price: u64,           // 8
+    pub mint_increase_amount: u64,  // 8
+    pub by_token: u64,              // 8
+    pub end_date: i64,              // 8
+    pub last_bid_date: i64,         // 8
+    pub last_bidder: Pubkey,        // 32
+    pub highest_bid: u64,           // 8
+    pub status: u64,                // 8
+}
 
-// impl Default for UserPool {
-//     #[inline]
-//     fn default() -> UserPool {
-//         UserPool {
-//             owner: Pubkey::default(),
-//             last_reward_time: 0,
-//             staked_count: 0,
-//             // staked_mints: [
-//             //     StakedData {
-//             //         ..Default::default()
-//             //     }; STAKE_MAX_COUNT
-//             // ],
-//         }
-//     }
-// }
-
-// impl UserPool {
-//     pub fn add_nft(
-//         &mut self,
-//         nft_pubkey: Pubkey,
-//         now: i64,
-//     ) {
-//         let idx = self.staked_count as usize;
-//         // self.staked_mints[idx].mint = nft_pubkey;
-//         // self.staked_mints[idx].staked_time = now;
-//         self.staked_count += 1;
-//     }
-// }
+#[account]
+#[derive(Default)]
+pub struct UserData {
+    // 8 + 64
+    pub address: Pubkey,            // 32
+    pub traded_volume: u64,         // 8
+    pub traded_token_volume: u64,   // 8
+    pub escrow_sol_balance: u64,    // 8
+    pub escrow_token_balance: u64,  // 8
+}
