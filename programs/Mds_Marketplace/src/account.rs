@@ -1,15 +1,12 @@
 use anchor_lang::prelude::*;
 
-use crate::constants::*;
-use crate::error::*;
-
 #[account]
 #[derive(Default)]
 pub struct GlobalPool {
     // 8 + 376
     pub super_admin: Pubkey,        // 32
-    pub market_fee_sol: u64,        // 8
-    pub market_fee_token: u64,      // 8
+    pub market_fee_sol: u64,        // 8    Permyriad
+    pub market_fee_token: u64,      // 8    Permyriad
     pub team_count: u64,            // 8
     pub team_treasury: [Pubkey; 8], // 8 * 32
     pub treasury_rate: [u64; 8],    // 8 * 8
@@ -47,7 +44,7 @@ pub struct AuctionData {
     pub mint: Pubkey,               // 32
     pub creator: Pubkey,            // 32
     pub start_price: u64,           // 8
-    pub mint_increase_amount: u64,  // 8
+    pub min_increase_amount: u64,   // 8
     pub by_token: u64,              // 8
     pub end_date: i64,              // 8
     pub last_bid_date: i64,         // 8

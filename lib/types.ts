@@ -1,16 +1,17 @@
 import * as anchor from '@project-serum/anchor';
 import {PublicKey} from '@solana/web3.js';
 
-export const GLOBAL_AUTHORITY_SEED = "global-authority-v1-1";
-export const SELL_DATA_SEED = "sell-info-v1-1";
+export const GLOBAL_AUTHORITY_SEED = "global-authority-v1";
+export const SELL_DATA_SEED = "sell-info-v1";
 export const SELL_DATA_SIZE = 136;
-export const OFFER_DATA_SEED = "offer-info-v1-1";
-export const USER_DATA_SEED = "user-info-v1-1";
-export const AUCTION_DATA_SEED = "auction-info-v1-1";
-export const BID_DATA_SEED = "bid-info-v1-1";
+export const OFFER_DATA_SEED = "offer-info-v1";
+export const OFFER_DATA_SIZE = 104;
+export const USER_DATA_SEED = "user-info-v1";
+export const AUCTION_DATA_SEED = "auction-info-v1";
+export const AUCTION_DATA_SIZE = 160;
 export const ESCROW_VAULT_SEED = "escrow-vault";
 
-export const MARKETPLACE_PROGRAM_ID = new PublicKey("5bw4QGFgrxigxxP5m3S7v7fZoF9a1F2QAMnxjhMjZKfR");
+export const MARKETPLACE_PROGRAM_ID = new PublicKey("3TfzeR3fQsoHzaXBkr84WWoYcqseJgUtqzppbu5wafMS");
 export const ABB_TOKEN_MINT = new PublicKey("8EoML7gaBJsgJtepm25wq3GuUCqLYHBoqd3HP1JxtyBx");
 export const ABB_TOKEN_DECIMAL = 1_000_000_000;   // ABB Token Decimal
 
@@ -50,7 +51,7 @@ export interface AuctionData {
     mint: PublicKey,                // 32
     creator: PublicKey,             // 32
     startPrice: anchor.BN,          // 8
-    mintIncreaseAmount: anchor.BN,  // 8
+    minIncreaseAmount: anchor.BN,   // 8
     byToken: anchor.BN,             // 8
     endDate: anchor.BN,             // 8
     lastBidDate: anchor.BN,         // 8

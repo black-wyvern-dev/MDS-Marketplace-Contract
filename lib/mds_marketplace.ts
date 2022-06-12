@@ -16,6 +16,11 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -29,6 +34,124 @@ export type MdsMarketplace = {
       "args": [
         {
           "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "updateFee",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "solFee",
+          "type": "u64"
+        },
+        {
+          "name": "tokenFee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "addTeamTreasury",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "address",
+          "type": "publicKey"
+        },
+        {
+          "name": "rate",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "removeTeamTreasury",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "address",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "initUserPool",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
           "type": "u8"
         }
       ]
@@ -127,7 +250,11 @@ export type MdsMarketplace = {
           "type": "u8"
         },
         {
-          "name": "price",
+          "name": "priceSol",
+          "type": "u64"
+        },
+        {
+          "name": "priceToken",
           "type": "u64"
         }
       ]
@@ -201,6 +328,11 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
+          "name": "buyerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "userNftTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -212,6 +344,11 @@ export type MdsMarketplace = {
         },
         {
           "name": "seller",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "sellerUserPool",
           "isMut": true,
           "isSigner": false
         },
@@ -247,11 +384,692 @@ export type MdsMarketplace = {
           "type": "u8"
         },
         {
-          "name": "sellBump",
+          "name": "nftBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellerBump",
+          "type": "u8"
+        },
+        {
+          "name": "buyerBump",
           "type": "u8"
         },
         {
           "name": "byToken",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "depositToEscrow",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "sol",
+          "type": "u64"
+        },
+        {
+          "name": "token",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdrawFromEscrow",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "sol",
+          "type": "u64"
+        },
+        {
+          "name": "token",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initOfferData",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nft",
+          "type": "publicKey"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "makeOffer",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "sellBump",
+          "type": "u8"
+        },
+        {
+          "name": "offerBump",
+          "type": "u8"
+        },
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "byToken",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cancelOffer",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "offerBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "acceptOffer",
+      "accounts": [
+        {
+          "name": "seller",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "buyer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "sellerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "buyerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "nftBump",
+          "type": "u8"
+        },
+        {
+          "name": "offerBump",
+          "type": "u8"
+        },
+        {
+          "name": "buyerBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellerBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initAuctionData",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nft",
+          "type": "publicKey"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "createAuction",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "startPrice",
+          "type": "u64"
+        },
+        {
+          "name": "minIncrease",
+          "type": "u64"
+        },
+        {
+          "name": "byToken",
+          "type": "u64"
+        },
+        {
+          "name": "endDate",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "placeBid",
+      "accounts": [
+        {
+          "name": "bidder",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bidderTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "outBidder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "outBidderTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claimAuction",
+      "accounts": [
+        {
+          "name": "bidder",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bidderUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creatorTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creatorUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "cancelAuction",
+      "accounts": [
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
           "type": "u8"
         }
       ]
@@ -386,7 +1204,7 @@ export type MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "mintIncreaseAmount",
+            "name": "minIncreaseAmount",
             "type": "u64"
           },
           {
@@ -398,39 +1216,19 @@ export type MdsMarketplace = {
             "type": "i64"
           },
           {
-            "name": "createdDate",
+            "name": "lastBidDate",
             "type": "i64"
           },
           {
-            "name": "settled",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "bidData",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
+            "name": "lastBidder",
             "type": "publicKey"
           },
           {
-            "name": "bidder",
-            "type": "publicKey"
-          },
-          {
-            "name": "price",
+            "name": "highestBid",
             "type": "u64"
           },
           {
-            "name": "auctionCreatedDate",
-            "type": "i64"
-          },
-          {
-            "name": "active",
+            "name": "status",
             "type": "u64"
           }
         ]
@@ -446,102 +1244,141 @@ export type MdsMarketplace = {
             "type": "publicKey"
           },
           {
-            "name": "requiredEscrowSol",
+            "name": "tradedVolume",
             "type": "u64"
           },
           {
-            "name": "requiredEscrowToken",
+            "name": "tradedTokenVolume",
+            "type": "u64"
+          },
+          {
+            "name": "escrowSolBalance",
+            "type": "u64"
+          },
+          {
+            "name": "escrowTokenBalance",
             "type": "u64"
           }
         ]
       }
     }
   ],
-  "errors": [
+  "types": [
     {
-      "code": 6000,
-      "name": "InvalidSuperOwner",
-      "msg": "Invalid Super Owner"
-    },
-    {
-      "code": 6001,
-      "name": "InvalidGlobalPool",
-      "msg": "Invalid Global Pool Address"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidFeePercent",
-      "msg": "Marketplace Fee is Permille"
-    },
-    {
-      "code": 6003,
-      "name": "MaxTeamCountExceed",
-      "msg": "Max Team Count is 8"
-    },
-    {
-      "code": 6004,
-      "name": "NoTeamTreasuryYet",
-      "msg": "Treasury Wallet Not Configured"
-    },
-    {
-      "code": 6005,
-      "name": "TreasuryAddressNotFound",
-      "msg": "Treasury Address Not Exist"
-    },
-    {
-      "code": 6006,
-      "name": "TreasuryAddressAlreadyAdded",
-      "msg": "Treasury Address Already Exist"
-    },
-    {
-      "code": 6007,
-      "name": "MaxTreasuryRateSumExceed",
-      "msg": "Total Treasury Rate Sum Should Less Than 100%"
-    },
-    {
-      "code": 6008,
-      "name": "Uninitialized",
-      "msg": "Uninitialized Account"
-    },
-    {
-      "code": 6009,
-      "name": "InvalidParamInput",
-      "msg": "Instruction Parameter is Invalid"
-    },
-    {
-      "code": 6010,
-      "name": "SellerMismatch",
-      "msg": "Payer Mismatch with NFT Seller"
-    },
-    {
-      "code": 6011,
-      "name": "InvalidNFTDataAcount",
-      "msg": "Invalid NFT Data Account"
-    },
-    {
-      "code": 6012,
-      "name": "NotListedNFT",
-      "msg": "The NFT Is Not Listed"
-    },
-    {
-      "code": 6013,
-      "name": "SellerAcountMismatch",
-      "msg": "Seller Account Mismatch with NFT Seller Data"
-    },
-    {
-      "code": 6014,
-      "name": "InsufficientBuyerSolBalance",
-      "msg": "Buyer Sol Balance is Less than NFT SOL Price"
-    },
-    {
-      "code": 6015,
-      "name": "InvaliedMetadata",
-      "msg": "Invalid Metadata Address"
-    },
-    {
-      "code": 6016,
-      "name": "MetadataCreatorParseError",
-      "msg": "Can't Parse The NFT's Creators"
+      "name": "MarketplaceError",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "InvalidSuperOwner"
+          },
+          {
+            "name": "InvalidOwner"
+          },
+          {
+            "name": "InvalidGlobalPool"
+          },
+          {
+            "name": "InvalidFeePercent"
+          },
+          {
+            "name": "MaxTeamCountExceed"
+          },
+          {
+            "name": "NoTeamTreasuryYet"
+          },
+          {
+            "name": "TreasuryAddressNotFound"
+          },
+          {
+            "name": "TreasuryAddressAlreadyAdded"
+          },
+          {
+            "name": "MaxTreasuryRateSumExceed"
+          },
+          {
+            "name": "TeamTreasuryCountMismatch"
+          },
+          {
+            "name": "TeamTreasuryAddressMismatch"
+          },
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "InvalidParamInput"
+          },
+          {
+            "name": "SellerMismatch"
+          },
+          {
+            "name": "InvalidNFTDataAcount"
+          },
+          {
+            "name": "NotListedNFT"
+          },
+          {
+            "name": "SellerAccountMismatch"
+          },
+          {
+            "name": "InsufficientBuyerSolBalance"
+          },
+          {
+            "name": "InsufficientBuyerTokenBalance"
+          },
+          {
+            "name": "InvaliedMetadata"
+          },
+          {
+            "name": "MetadataCreatorParseError"
+          },
+          {
+            "name": "InvalidOfferDataMint"
+          },
+          {
+            "name": "InvalidOfferDataBuyer"
+          },
+          {
+            "name": "OfferForNotListedNFT"
+          },
+          {
+            "name": "InvalidOfferPrice"
+          },
+          {
+            "name": "DisabledOffer"
+          },
+          {
+            "name": "OfferForExpiredListingNFT"
+          },
+          {
+            "name": "EndedAuction"
+          },
+          {
+            "name": "InvalidBidPrice"
+          },
+          {
+            "name": "DoubleBidFromOneBidder"
+          },
+          {
+            "name": "OutBidderMismatch"
+          },
+          {
+            "name": "NotEndedAuction"
+          },
+          {
+            "name": "CreatorAccountMismatch"
+          },
+          {
+            "name": "BidderAccountMismatch"
+          },
+          {
+            "name": "AuctionHasBid"
+          },
+          {
+            "name": "BidFromAuctionCreator"
+          }
+        ]
+      }
     }
   ]
 };
@@ -564,6 +1401,11 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -577,6 +1419,124 @@ export const IDL: MdsMarketplace = {
       "args": [
         {
           "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "updateFee",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "solFee",
+          "type": "u64"
+        },
+        {
+          "name": "tokenFee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "addTeamTreasury",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "address",
+          "type": "publicKey"
+        },
+        {
+          "name": "rate",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "removeTeamTreasury",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "address",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "initUserPool",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "bump",
           "type": "u8"
         }
       ]
@@ -675,7 +1635,11 @@ export const IDL: MdsMarketplace = {
           "type": "u8"
         },
         {
-          "name": "price",
+          "name": "priceSol",
+          "type": "u64"
+        },
+        {
+          "name": "priceToken",
           "type": "u64"
         }
       ]
@@ -749,6 +1713,11 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
+          "name": "buyerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "userNftTokenAccount",
           "isMut": true,
           "isSigner": false
@@ -760,6 +1729,11 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "seller",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "sellerUserPool",
           "isMut": true,
           "isSigner": false
         },
@@ -795,11 +1769,692 @@ export const IDL: MdsMarketplace = {
           "type": "u8"
         },
         {
-          "name": "sellBump",
+          "name": "nftBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellerBump",
+          "type": "u8"
+        },
+        {
+          "name": "buyerBump",
           "type": "u8"
         },
         {
           "name": "byToken",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "depositToEscrow",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "sol",
+          "type": "u64"
+        },
+        {
+          "name": "token",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdrawFromEscrow",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "sol",
+          "type": "u64"
+        },
+        {
+          "name": "token",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initOfferData",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nft",
+          "type": "publicKey"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "makeOffer",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "userPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "sellBump",
+          "type": "u8"
+        },
+        {
+          "name": "offerBump",
+          "type": "u8"
+        },
+        {
+          "name": "userBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "byToken",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "cancelOffer",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "offerBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "acceptOffer",
+      "accounts": [
+        {
+          "name": "seller",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "buyer",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "offerDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "sellerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "buyerUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "nftBump",
+          "type": "u8"
+        },
+        {
+          "name": "offerBump",
+          "type": "u8"
+        },
+        {
+          "name": "buyerBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellerBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initAuctionData",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "nft",
+          "type": "publicKey"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "createAuction",
+      "accounts": [
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "startPrice",
+          "type": "u64"
+        },
+        {
+          "name": "minIncrease",
+          "type": "u64"
+        },
+        {
+          "name": "byToken",
+          "type": "u64"
+        },
+        {
+          "name": "endDate",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "placeBid",
+      "accounts": [
+        {
+          "name": "bidder",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bidderTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "outBidder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "outBidderTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claimAuction",
+      "accounts": [
+        {
+          "name": "bidder",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrowVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "bidderUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creatorTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "creatorUserPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "escrowBump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "cancelAuction",
+      "accounts": [
+        {
+          "name": "creator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "globalAuthority",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destNftTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "globalBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
           "type": "u8"
         }
       ]
@@ -934,7 +2589,7 @@ export const IDL: MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "mintIncreaseAmount",
+            "name": "minIncreaseAmount",
             "type": "u64"
           },
           {
@@ -946,39 +2601,19 @@ export const IDL: MdsMarketplace = {
             "type": "i64"
           },
           {
-            "name": "createdDate",
+            "name": "lastBidDate",
             "type": "i64"
           },
           {
-            "name": "settled",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "bidData",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "mint",
+            "name": "lastBidder",
             "type": "publicKey"
           },
           {
-            "name": "bidder",
-            "type": "publicKey"
-          },
-          {
-            "name": "price",
+            "name": "highestBid",
             "type": "u64"
           },
           {
-            "name": "auctionCreatedDate",
-            "type": "i64"
-          },
-          {
-            "name": "active",
+            "name": "status",
             "type": "u64"
           }
         ]
@@ -994,102 +2629,141 @@ export const IDL: MdsMarketplace = {
             "type": "publicKey"
           },
           {
-            "name": "requiredEscrowSol",
+            "name": "tradedVolume",
             "type": "u64"
           },
           {
-            "name": "requiredEscrowToken",
+            "name": "tradedTokenVolume",
+            "type": "u64"
+          },
+          {
+            "name": "escrowSolBalance",
+            "type": "u64"
+          },
+          {
+            "name": "escrowTokenBalance",
             "type": "u64"
           }
         ]
       }
     }
   ],
-  "errors": [
+  "types": [
     {
-      "code": 6000,
-      "name": "InvalidSuperOwner",
-      "msg": "Invalid Super Owner"
-    },
-    {
-      "code": 6001,
-      "name": "InvalidGlobalPool",
-      "msg": "Invalid Global Pool Address"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidFeePercent",
-      "msg": "Marketplace Fee is Permille"
-    },
-    {
-      "code": 6003,
-      "name": "MaxTeamCountExceed",
-      "msg": "Max Team Count is 8"
-    },
-    {
-      "code": 6004,
-      "name": "NoTeamTreasuryYet",
-      "msg": "Treasury Wallet Not Configured"
-    },
-    {
-      "code": 6005,
-      "name": "TreasuryAddressNotFound",
-      "msg": "Treasury Address Not Exist"
-    },
-    {
-      "code": 6006,
-      "name": "TreasuryAddressAlreadyAdded",
-      "msg": "Treasury Address Already Exist"
-    },
-    {
-      "code": 6007,
-      "name": "MaxTreasuryRateSumExceed",
-      "msg": "Total Treasury Rate Sum Should Less Than 100%"
-    },
-    {
-      "code": 6008,
-      "name": "Uninitialized",
-      "msg": "Uninitialized Account"
-    },
-    {
-      "code": 6009,
-      "name": "InvalidParamInput",
-      "msg": "Instruction Parameter is Invalid"
-    },
-    {
-      "code": 6010,
-      "name": "SellerMismatch",
-      "msg": "Payer Mismatch with NFT Seller"
-    },
-    {
-      "code": 6011,
-      "name": "InvalidNFTDataAcount",
-      "msg": "Invalid NFT Data Account"
-    },
-    {
-      "code": 6012,
-      "name": "NotListedNFT",
-      "msg": "The NFT Is Not Listed"
-    },
-    {
-      "code": 6013,
-      "name": "SellerAcountMismatch",
-      "msg": "Seller Account Mismatch with NFT Seller Data"
-    },
-    {
-      "code": 6014,
-      "name": "InsufficientBuyerSolBalance",
-      "msg": "Buyer Sol Balance is Less than NFT SOL Price"
-    },
-    {
-      "code": 6015,
-      "name": "InvaliedMetadata",
-      "msg": "Invalid Metadata Address"
-    },
-    {
-      "code": 6016,
-      "name": "MetadataCreatorParseError",
-      "msg": "Can't Parse The NFT's Creators"
+      "name": "MarketplaceError",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "InvalidSuperOwner"
+          },
+          {
+            "name": "InvalidOwner"
+          },
+          {
+            "name": "InvalidGlobalPool"
+          },
+          {
+            "name": "InvalidFeePercent"
+          },
+          {
+            "name": "MaxTeamCountExceed"
+          },
+          {
+            "name": "NoTeamTreasuryYet"
+          },
+          {
+            "name": "TreasuryAddressNotFound"
+          },
+          {
+            "name": "TreasuryAddressAlreadyAdded"
+          },
+          {
+            "name": "MaxTreasuryRateSumExceed"
+          },
+          {
+            "name": "TeamTreasuryCountMismatch"
+          },
+          {
+            "name": "TeamTreasuryAddressMismatch"
+          },
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "InvalidParamInput"
+          },
+          {
+            "name": "SellerMismatch"
+          },
+          {
+            "name": "InvalidNFTDataAcount"
+          },
+          {
+            "name": "NotListedNFT"
+          },
+          {
+            "name": "SellerAccountMismatch"
+          },
+          {
+            "name": "InsufficientBuyerSolBalance"
+          },
+          {
+            "name": "InsufficientBuyerTokenBalance"
+          },
+          {
+            "name": "InvaliedMetadata"
+          },
+          {
+            "name": "MetadataCreatorParseError"
+          },
+          {
+            "name": "InvalidOfferDataMint"
+          },
+          {
+            "name": "InvalidOfferDataBuyer"
+          },
+          {
+            "name": "OfferForNotListedNFT"
+          },
+          {
+            "name": "InvalidOfferPrice"
+          },
+          {
+            "name": "DisabledOffer"
+          },
+          {
+            "name": "OfferForExpiredListingNFT"
+          },
+          {
+            "name": "EndedAuction"
+          },
+          {
+            "name": "InvalidBidPrice"
+          },
+          {
+            "name": "DoubleBidFromOneBidder"
+          },
+          {
+            "name": "OutBidderMismatch"
+          },
+          {
+            "name": "NotEndedAuction"
+          },
+          {
+            "name": "CreatorAccountMismatch"
+          },
+          {
+            "name": "BidderAccountMismatch"
+          },
+          {
+            "name": "AuctionHasBid"
+          },
+          {
+            "name": "BidFromAuctionCreator"
+          }
+        ]
+      }
     }
   ]
 };

@@ -1,7 +1,7 @@
 [features]
 seeds = false
-[programs.localnet]
-mds_marketplace = "5bw4QGFgrxigxxP5m3S7v7fZoF9a1F2QAMnxjhMjZKfR"
+[programs.devnet]
+mds_marketplace = "3TfzeR3fQsoHzaXBkr84WWoYcqseJgUtqzppbu5wafMS"
 
 [registry]
 url = "https://anchor.projectserum.com"

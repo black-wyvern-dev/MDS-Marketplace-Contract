@@ -7,22 +7,39 @@ import fs from 'fs';
 import path from 'path';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
-import { GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, SellData, SELL_DATA_SEED, UserData, USER_DATA_SEED } from '../lib/types';
-import {IDL as MarketplaceIDL} from '../target/types/mds_marketplace';
+import { AuctionData, AUCTION_DATA_SEED, GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, OfferData, OFFER_DATA_SEED, SellData, SELL_DATA_SEED, UserData, USER_DATA_SEED } from '../lib/types';
+import {IDL as MarketplaceIDL} from "../target/types/mds_marketplace";
 import {
+    createAcceptOfferTx,
+    createAddTreasuryTx,
+    createCancelAuctionTx,
+    createCancelOfferTx,
+    createClaimAuctionTx,
+    createCreateAuctionTx,
     createDelistNftTx,
     createDepositTx,
+    createInitAuctionDataTx,
     createInitializeTx,
+    createInitOfferDataTx,
     createInitSellDataTx,
     createInitUserTx,
     createListForSellNftTx,
+    createMakeOfferTx,
+    createPlaceBidTx,
     createPurchaseTx,
+    createRemoveTreasuryTx,
+    createUpdateFeeTx,
     createWithdrawTx,
     getAllListedNFTs,
+    getAllOffersForListedNFT,
+    getAllStartedAuctions,
+    getAuctionDataState,
     getGlobalState,
     getNFTPoolState,
+    getOfferDataState,
     getUserPoolState
 } from '../lib/scripts';
+import { isInitializedUser } from '../lib/utils';
 
 let solConnection = null;
 let payer = null;
@@ -112,8 +129,7 @@ export const initSellData = async (
     console.log("Your transaction signature", txId);
 }
 
-export const initUserPool = async (
-) => {
+export const initUserPool = async () => {
     const tx = await createInitUserTx(payer.publicKey, program);
     const {blockhash} = await solConnection.getRecentBlockhash('finalized');
     tx.feePayer = payer.publicKey;
@@ -124,6 +140,65 @@ export const initUserPool = async (
     console.log("Your transaction signature", txId);
 }
 
+export const initAuctionData = async (
+    mint: PublicKey,
+) => {
+    const tx = await createInitAuctionDataTx(mint, payer.publicKey, program);
+    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "finalized");
+    console.log("Your transaction signature", txId);
+}
+
+export const updateFee = async (
+    solFee: number,
+    tokenFee: number,
+) => {
+    console.log(solFee, tokenFee);
+    const tx = await createUpdateFeeTx(payer.publicKey, program, solFee, tokenFee);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const addTreasury = async (
+    treasury: PublicKey,
+    rate: number,
+) => {
+    console.log(treasury.toBase58(), rate);
+
+    const tx = await createAddTreasuryTx(payer.publicKey, treasury, rate, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const removeTreasury = async (
+    treasury: PublicKey,
+) => {
+    console.log(treasury.toBase58());
+
+    const tx = await createRemoveTreasuryTx(payer.publicKey, program, treasury);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
 export const depositEscrow = async (
     sol: number,
     token: number,
@@ -131,15 +206,9 @@ export const depositEscrow = async (
     let userAddress = payer.publicKey;
     console.log(userAddress.toBase58(), sol, token);
 
-    const [userPool, _] = await PublicKey.findProgramAddress(
-        [Buffer.from(USER_DATA_SEED), userAddress.toBuffer()],
-        MARKETPLACE_PROGRAM_ID,
-    );
-    console.log('User Data PDA: ', userPool.toBase58());
-
-    let poolAccount = await solConnection.getAccountInfo(userPool);
-    if (poolAccount === null || poolAccount.data === null) {
-        await initUserPool();
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
     }
 
     const tx = await createDepositTx(userAddress, sol, token, program, solConnection);
@@ -159,6 +228,11 @@ export const withdrawEscrow = async (
     let userAddress = payer.publicKey;
     console.log(userAddress.toBase58(), sol, token);
 
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
     const tx = await createWithdrawTx(userAddress, sol, token, program, solConnection);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
@@ -168,13 +242,18 @@ export const withdrawEscrow = async (
     await solConnection.confirmTransaction(txId, "confirmed");
     console.log("Your transaction signature", txId);
 }
-    
+
 export const listNftForSale = async (
     mint: PublicKey,
     priceSol: number,
     priceToken: number,
 ) => {
     console.log(mint.toBase58(), priceSol, priceToken);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
 
     const [sellData, _] = await PublicKey.findProgramAddress(
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
@@ -202,6 +281,11 @@ export const delistNft = async (
 ) => {
     console.log(mint.toBase58());
 
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
     const tx = await createDelistNftTx(mint, payer.publicKey, program, solConnection);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
@@ -217,8 +301,211 @@ export const purchase = async (
     byToken: boolean,
 ) => {
     console.log(mint.toBase58(), byToken);
+    
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
 
-    const tx = await createPurchaseTx(mint, payer.publicKey, byToken, program, solConnection);
+    const globalPool: GlobalPool = await getGlobalState(program);
+
+    const tx = await createPurchaseTx(mint, payer.publicKey, byToken, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const initOfferData = async (
+    mint: PublicKey,
+) => {
+    const tx = await createInitOfferDataTx(mint, payer.publicKey, program);
+    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "finalized");
+    console.log("Your transaction signature", txId);
+}
+
+export const makeOffer = async (
+    mint: PublicKey,
+    price: number,
+    byToken: boolean,
+) => {
+    console.log(mint.toBase58(), price, byToken);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const [offerData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(OFFER_DATA_SEED), mint.toBuffer(), payer.publicKey.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('Offer Data PDA: ', offerData.toBase58());
+
+    let poolAccount = await solConnection.getAccountInfo(offerData);
+    if (poolAccount === null || poolAccount.data === null) {
+        await initOfferData(mint);
+    }
+
+    const tx = await createMakeOfferTx(mint, payer.publicKey, price, byToken, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const cancelOffer = async (
+    mint: PublicKey,
+) => {
+    console.log(mint.toBase58());
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const tx = await createCancelOfferTx(mint, payer.publicKey, program);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const acceptOffer = async (
+    mint: PublicKey,
+    buyer: PublicKey,
+) => {
+    console.log(mint.toBase58(), buyer.toBase58());
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const globalPool: GlobalPool = await getGlobalState(program);
+
+    const tx = await createAcceptOfferTx(mint, buyer, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const createAuction = async (
+    mint: PublicKey,
+    startPrice: number,
+    minIncrease: number,
+    endDate: number,
+    byToken: boolean,
+) => {
+    console.log(mint.toBase58(), startPrice, minIncrease, endDate, byToken);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const [auctionData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('Auction Data PDA: ', auctionData.toBase58());
+
+    let poolAccount = await solConnection.getAccountInfo(auctionData);
+    if (poolAccount === null || poolAccount.data === null) {
+        await initAuctionData(mint);
+    }
+
+    const tx = await createCreateAuctionTx(
+        mint,
+        payer.publicKey,
+        startPrice,
+        minIncrease,
+        byToken,
+        endDate,
+        program,
+        solConnection,
+    );
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const placeBid = async (
+    mint: PublicKey,
+    price: number,
+) => {
+    console.log(mint.toBase58(), price);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const tx = await createPlaceBidTx(mint, payer.publicKey, price, program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const claimAuction = async (
+    mint: PublicKey,
+) => {
+    console.log(mint.toBase58());
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const globalPool: GlobalPool = await getGlobalState(program);
+
+    const tx = await createClaimAuctionTx(mint, payer.publicKey, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
+    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const cancelAuction = async (
+    mint: PublicKey,
+) => {
+    console.log(mint.toBase58());
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const tx = await createCancelAuctionTx(mint, payer.publicKey, program, solConnection);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -243,6 +530,39 @@ export const getNFTPoolInfo = async (
     };
 }
 
+export const getOfferDataInfo = async (
+    mint: PublicKey,
+    userAddress: PublicKey,
+) => {
+    const offerData: OfferData = await getOfferDataState(mint, userAddress, program);
+    return {
+      mint: offerData.mint.toBase58(),
+      buyer: offerData.buyer.toBase58(),
+      offerPrice: offerData.offerPrice.toNumber(),
+      offerListingDate: offerData.offerListingDate.toNumber(),
+      byToken: offerData.byToken.toNumber(),
+      active: offerData.active.toNumber(),
+    };
+}
+
+export const getAuctionDataInfo = async (
+    mint: PublicKey,
+) => {
+    const auctionData: AuctionData = await getAuctionDataState(mint, program);
+    return {
+      mint: auctionData.mint.toBase58(),
+      creator: auctionData.creator.toBase58(),
+      startPrice: auctionData.startPrice.toNumber(),
+      minIncreaseAmount: auctionData.minIncreaseAmount.toNumber(),
+      endDate: auctionData.endDate.toNumber(),
+      byToken: auctionData.byToken.toNumber(),
+      lastBidder: auctionData.lastBidder.toBase58(),
+      lastBidDate: auctionData.lastBidDate.toNumber(),
+      highestBid: auctionData.highestBid.toNumber(),
+      status: auctionData.status.toNumber(),
+    };
+}
+
 export const getUserPoolInfo = async (
     userAddress: PublicKey,
 ) => {
@@ -262,6 +582,9 @@ export const getGlobalInfo = async () => {
       admin: globalPool.superAdmin.toBase58(),
       marketFeeSol: globalPool.marketFeeSol.toNumber(),
       marketFeeToken: globalPool.marketFeeToken.toNumber(),
+      teamCount: globalPool.teamCount.toNumber(),
+      teamTreasury: globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toBase58()),
+      treasuryRate: globalPool.treasuryRate.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toNumber()),
     };
 
     return result;
@@ -269,4 +592,12 @@ export const getGlobalInfo = async () => {
 
 export const getAllNFTs = async (rpc?: string) => {
     return await getAllListedNFTs(solConnection, rpc);
+}
+
+export const getAllOffersForNFT = async (address: string, rpc?: string) => {
+    return await getAllOffersForListedNFT(address, solConnection, rpc);
+}
+
+export const getAllAuctions = async (rpc?: string) => {
+    return await getAllStartedAuctions(solConnection, rpc);
 }
