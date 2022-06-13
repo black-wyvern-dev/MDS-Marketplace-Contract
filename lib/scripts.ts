@@ -14,7 +14,6 @@ import {
     SellData,
     SELL_DATA_SEED,
     SELL_DATA_SIZE,
-    ABB_TOKEN_MINT,
     ESCROW_VAULT_SEED,
     USER_DATA_SEED,
     UserData,
@@ -32,7 +31,6 @@ import {
     getOwnerOfNFT,
     getMetadata,
     isExistAccount,
-    getTokenAccount,
     METAPLEX,
 } from './utils';
 
@@ -68,12 +66,10 @@ export const getAllListedNFTs = async (connection: Connection, rpcUrl: string | 
 
             let buf = data.slice(104, 112).reverse();
             let priceSol = (new anchor.BN(buf));
-            buf = data.slice(112, 120).reverse();
-            let priceToken = (new anchor.BN(buf));
 
-            buf = data.slice(120, 128).reverse();
+            buf = data.slice(112, 120).reverse();
             let listedDate = (new anchor.BN(buf));
-            buf = data.slice(128, 136).reverse();
+            buf = data.slice(120, 128).reverse();
             let active = (new anchor.BN(buf));
 
             if (active.toNumber() == 1)
@@ -82,7 +78,6 @@ export const getAllListedNFTs = async (connection: Connection, rpcUrl: string | 
                     seller,
                     collection,
                     priceSol,
-                    priceToken,
                     listedDate,
                     active,
                 });
@@ -100,7 +95,6 @@ export const getAllListedNFTs = async (connection: Connection, rpcUrl: string | 
                 seller: info.seller.toBase58(),
                 collection: info.collection.toBase58(),
                 priceSol: info.priceSol.toNumber(),
-                priceToken: info.priceToken.toNumber(),
                 listedDate: info.listedDate.toNumber(),
                 active: info.active.toNumber(),
             }
@@ -148,8 +142,6 @@ export const getAllOffersForListedNFT = async (mint: string, connection: Connect
             buf = data.slice(80, 88).reverse();
             let offerListingDate = (new anchor.BN(buf));
             buf = data.slice(88, 96).reverse();
-            let byToken = (new anchor.BN(buf));
-            buf = data.slice(96, 104).reverse();
             let active = (new anchor.BN(buf));
 
             if (active.toNumber() == 1)
@@ -157,7 +149,6 @@ export const getAllOffersForListedNFT = async (mint: string, connection: Connect
                     mint,
                     buyer,
                     offerPrice,
-                    byToken,
                     offerListingDate,
                     active,
                 });
@@ -175,7 +166,6 @@ export const getAllOffersForListedNFT = async (mint: string, connection: Connect
                 buyer: info.buyer.toBase58(),
                 offerPrice: info.offerPrice.toNumber(),
                 offerListingDate: info.offerListingDate.toNumber(),
-                byToken: info.byToken.toNumber(),
                 active: info.active.toNumber(),
             }
         })
@@ -215,15 +205,13 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
             buf = data.slice(80, 88).reverse();
             let minIncreaseAmount = (new anchor.BN(buf));
             buf = data.slice(88, 96).reverse();
-            let byToken = (new anchor.BN(buf));
-            buf = data.slice(96, 104).reverse();
             let endDate = (new anchor.BN(buf));
-            buf = data.slice(104, 112).reverse();
+            buf = data.slice(96, 104).reverse();
             let lastBidDate = (new anchor.BN(buf));
-            let lastBidder = new PublicKey(data.slice(112, 144));
-            buf = data.slice(144, 152).reverse();
+            let lastBidder = new PublicKey(data.slice(104, 136));
+            buf = data.slice(136, 144).reverse();
             let highestBid = (new anchor.BN(buf));
-            buf = data.slice(152, 160).reverse();
+            buf = data.slice(144, 152).reverse();
             let status = (new anchor.BN(buf));
 
             // if (status.toNumber() !== 0)
@@ -232,7 +220,6 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
                     creator,
                     startPrice,
                     minIncreaseAmount,
-                    byToken,
                     endDate,
                     lastBidDate,
                     lastBidder,
@@ -254,7 +241,6 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
                 startPrice: info.startPrice.toNumber(),
                 minIncreaseAmount: info.minIncreaseAmount.toNumber(),
                 endDate: info.endDate.toNumber(),
-                byToken: info.byToken.toNumber(),
                 lastBidDate: info.lastBidDate.toNumber(),
                 lastBidder: info.lastBidder.toBase58(),
                 highestBid: info.highestBid.toNumber(),
@@ -392,7 +378,6 @@ export const createUpdateFeeTx = async (
     userAddress: PublicKey,
     program: anchor.Program,
     solFee: number,
-    tokenFee: number,
 ) => {
     const [globalAuthority, bump] = await PublicKey.findProgramAddress(
         [Buffer.from(GLOBAL_AUTHORITY_SEED)],
@@ -400,10 +385,10 @@ export const createUpdateFeeTx = async (
     );
     
     let tx = new Transaction();
-    console.log('==>updating fee', globalAuthority.toBase58(), solFee, tokenFee);
+    console.log('==>updating fee', globalAuthority.toBase58(), solFee);
 
     tx.add(program.instruction.updateFee(
-        bump, new anchor.BN(solFee), new anchor.BN(tokenFee), {
+        bump, new anchor.BN(solFee), {
         accounts: {
             admin: userAddress,
             globalAuthority,
@@ -420,7 +405,6 @@ export const createAddTreasuryTx = async (
     address: PublicKey,
     rate: number,
     program: anchor.Program,
-    connection: Connection,
 ) => {
     const [globalAuthority, bump] = await PublicKey.findProgramAddress(
         [Buffer.from(GLOBAL_AUTHORITY_SEED)],
@@ -429,16 +413,6 @@ export const createAddTreasuryTx = async (
     
     let tx = new Transaction();
     
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        address,
-        [ABB_TOKEN_MINT]
-    );
-    console.log("Treasury ABB Account = ", ret1.destinationAccounts[0].toBase58());
-
-
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
     console.log('==>adding team treasury', globalAuthority.toBase58(), address.toBase58(), rate);
     tx.add(program.instruction.addTeamTreasury(
         bump, address, new anchor.BN(rate), {
@@ -509,31 +483,9 @@ export const createInitUserTx = async (
 export const createDepositTx = async (
     userAddress: PublicKey,
     sol: number,
-    token: number,
     program: anchor.Program,
-    connection: Connection,
 ) => {
-    let ret = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        userAddress,
-        [ABB_TOKEN_MINT]
-    );
-
     let tx = new Transaction();
-    let userTokenAccount = ret.destinationAccounts[0];
-    if (!await isExistAccount(userTokenAccount, connection)) {
-        try {
-            let accountOfABB = await getTokenAccount(ABB_TOKEN_MINT, userAddress, connection);
-            userTokenAccount = accountOfABB;
-        } catch (e) {
-            if (token == 0) {
-                tx.add(ret.instructions[0]);
-            } else
-                throw 'No ABB Token Account for this user';
-        }
-    }
-    console.log("User ABB Account = ", userTokenAccount.toBase58());
 
     const [escrowVault, escrow_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(ESCROW_VAULT_SEED)],
@@ -545,27 +497,14 @@ export const createDepositTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        escrowVault,
-        [ABB_TOKEN_MINT]
-    );
     console.log('escrowVault = ', escrowVault.toBase58());
-    console.log("EscrowVault ABB Account = ", ret1.destinationAccounts[0].toBase58());
-
-
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
-    console.log('==> Depositing', userAddress.toBase58(), 'Sol', sol, 'Token:', token);
+    console.log('==> Depositing', userAddress.toBase58(), 'Sol', sol);
     tx.add(program.instruction.depositToEscrow(
-        user_bump, escrow_bump, new anchor.BN(sol), new anchor.BN(token), {
+        user_bump, escrow_bump, new anchor.BN(sol), {
         accounts: {
             owner: userAddress,
             userPool,
             escrowVault,
-            userTokenAccount,
-            escrowTokenAccount: ret1.destinationAccounts[0],
-            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
         instructions: [],
@@ -578,44 +517,28 @@ export const createDepositTx = async (
 export const createWithdrawTx = async (
     userAddress: PublicKey,
     sol: number,
-    token: number,
     program: anchor.Program,
-    connection: Connection,
 ) => {
     const [escrowVault, escrow_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(ESCROW_VAULT_SEED)],
         MARKETPLACE_PROGRAM_ID,
     );
-    let escrowTokenAccount = await getAssociatedTokenAccount(escrowVault, ABB_TOKEN_MINT);
     console.log('escrowVault = ', escrowVault.toBase58());
-    console.log("Escrow ABB Account = ", escrowTokenAccount.toBase58());
 
     const [userPool, user_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(USER_DATA_SEED), userAddress.toBuffer()],
         MARKETPLACE_PROGRAM_ID,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        userAddress,
-        [ABB_TOKEN_MINT]
-    );
-    console.log("User ABB Account = ", ret1.destinationAccounts[0].toBase58());
-
     let tx = new Transaction();
 
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
-    console.log('==> Withdrawing', userAddress.toBase58(), 'Sol', sol, 'Token:', token);
+    console.log('==> Withdrawing', userAddress.toBase58(), 'Sol', sol);
     tx.add(program.instruction.withdrawFromEscrow(
-        user_bump, escrow_bump, new anchor.BN(sol), new anchor.BN(token), {
+        user_bump, escrow_bump, new anchor.BN(sol), {
         accounts: {
             owner: userAddress,
             userPool,
             escrowVault,
-            userTokenAccount: ret1.destinationAccounts[0],
-            escrowTokenAccount,
-            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
         instructions: [],
@@ -659,9 +582,8 @@ export const createListForSellNftTx = async (
     program: anchor.Program,
     connection: Connection,
     priceSol: number,
-    priceToken: number,
 ) => {
-    if (priceSol < 0 || priceToken < 0) {
+    if (priceSol < 0) {
         throw 'Invalid Price Value';
     }
 
@@ -703,10 +625,10 @@ export const createListForSellNftTx = async (
     let tx = new Transaction();
 
     if (instructions.length > 0) instructions.map((ix) => tx.add(ix));
-    console.log('==>listing', mint.toBase58(), priceSol, priceToken);
+    console.log('==>listing', mint.toBase58(), priceSol);
 
     tx.add(program.instruction.listNftForSale(
-        bump, nft_bump, new anchor.BN(priceSol), new anchor.BN(priceToken), {
+        bump, nft_bump, new anchor.BN(priceSol), {
         accounts: {
             owner: userAddress,
             globalAuthority,
@@ -784,7 +706,6 @@ export const createDelistNftTx = async (
 export const createPurchaseTx = async (
     mint: PublicKey,
     userAddress: PublicKey,
-    byToken: boolean,
     treasuryAddresses: PublicKey[],
     program: anchor.Program,
     connection: Connection,
@@ -798,25 +719,7 @@ export const createPurchaseTx = async (
     let userNftTokenAccount = ret.destinationAccounts[0];
     console.log("User NFT = ", mint.toBase58(), userNftTokenAccount.toBase58());
 
-    let ret2 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        userAddress,
-        [ABB_TOKEN_MINT]
-    );
-
     let tx = new Transaction();
-    let userTokenAccount = ret2.destinationAccounts[0];
-    if (!await isExistAccount(userTokenAccount, connection)) {
-        try {
-            let accountOfABB = await getTokenAccount(ABB_TOKEN_MINT, userAddress, connection);
-            userTokenAccount = accountOfABB;
-        } catch (e) {
-            if (!byToken) tx.add(ret2.instructions[0]);
-            else throw 'No ABB Token Account for this user';
-        }
-    }
-    console.log("User ABB Account = ", userTokenAccount.toBase58());
 
     const [globalAuthority, bump] = await PublicKey.findProgramAddress(
         [Buffer.from(GLOBAL_AUTHORITY_SEED)],
@@ -851,28 +754,15 @@ export const createPurchaseTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        seller,
-        [ABB_TOKEN_MINT]
-    );
     console.log('Seller = ', seller.toBase58());
-    console.log("seller ABB Account = ", ret1.destinationAccounts[0].toBase58());
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
-    if (byToken) {
-        for (let idx in treasuryAccounts) {
-            treasuryAccounts[idx] = await getAssociatedTokenAccount(treasuryAccounts[idx], ABB_TOKEN_MINT);
-        }
-    }
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
 
     if (ret.instructions.length > 0) ret.instructions.map((ix) => tx.add(ix));
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
-    console.log('==> Purchasing', mint.toBase58(), 'By Token:', byToken);
+    console.log('==> Purchasing', mint.toBase58(),);
     tx.add(program.instruction.purchase(
-        bump, nft_bump, buyer_bump, seller_bump, new anchor.BN(byToken ? 1 : 0), {
+        bump, nft_bump, buyer_bump, seller_bump, {
         accounts: {
             buyer: userAddress,
             globalAuthority,
@@ -883,8 +773,6 @@ export const createPurchaseTx = async (
             nftMint: mint,
             seller,
             sellerUserPool,
-            userTokenAccount,
-            sellerTokenAccount: ret1.destinationAccounts[0],
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
@@ -934,29 +822,9 @@ export const createMakeOfferTx = async (
     mint: PublicKey,
     userAddress: PublicKey,
     price: number,
-    byToken: boolean,
     program: anchor.Program,
-    connection: Connection,
 ) => {
-    let ret = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        userAddress,
-        [ABB_TOKEN_MINT]
-    );
-
     let tx = new Transaction();
-    let userTokenAccount = ret.destinationAccounts[0];
-    if (!await isExistAccount(userTokenAccount, connection)) {
-        try {
-            let accountOfABB = await getTokenAccount(ABB_TOKEN_MINT, userAddress, connection);
-            userTokenAccount = accountOfABB;
-        } catch (e) {
-            if (!byToken) tx.add(ret.instructions[0]);
-            else throw 'No ABB Token Account for this user';
-        }
-    }
-    console.log("User ABB Account = ", userTokenAccount.toBase58());
 
     const [nftData, nft_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
@@ -978,19 +846,11 @@ export const createMakeOfferTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        escrowVault,
-        [ABB_TOKEN_MINT]
-    );
     console.log('escrowVault = ', escrowVault.toBase58());
-    console.log("EscrowVault ABB Account = ", ret1.destinationAccounts[0].toBase58());
 
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
-    console.log('==> making Offer', mint.toBase58(), userAddress.toBase58(), 'Price:', price, 'ByToken:', byToken);
+    console.log('==> making Offer', mint.toBase58(), userAddress.toBase58(), 'Price:', price);
     tx.add(program.instruction.makeOffer(
-        nft_bump, offer_bump, user_bump, escrow_bump, new anchor.BN(price), new anchor.BN(byToken ? 1 : 0), {
+        nft_bump, offer_bump, user_bump, escrow_bump, new anchor.BN(price), {
         accounts: {
             owner: userAddress,
             sellDataInfo: nftData,
@@ -998,9 +858,6 @@ export const createMakeOfferTx = async (
             nftMint: mint,
             userPool,
             escrowVault,
-            userTokenAccount,
-            escrowTokenAccount: ret1.destinationAccounts[0],
-            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
         instructions: [],
@@ -1091,35 +948,16 @@ export const createAcceptOfferTx = async (
         mint,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        seller,
-        seller,
-        [ABB_TOKEN_MINT]
-    );
-    console.log("Seller ABB Account = ", ret.destinationAccounts[0].toBase58());
-
-    let escrowTokenAccount = await getAssociatedTokenAccount(
-        escrowVault,
-        ABB_TOKEN_MINT,
-    );
     console.log('escrowVault = ', escrowVault.toBase58());
-    console.log("EscrowVault ABB Account = ", escrowTokenAccount.toBase58());
 
     if (ret.instructions.length > 0) ret.instructions.map((ix) => tx.add(ix));
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
-    if (offerInfo.byToken.toNumber()) {
-        for (let idx in treasuryAccounts) {
-            treasuryAccounts[idx] = await getAssociatedTokenAccount(treasuryAccounts[idx], ABB_TOKEN_MINT);
-        }
-    }
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
 
     console.log('==> Accept Offer  Mint:', mint.toBase58(),
         'Buyer:', buyer.toBase58(), 'Seller:', seller.toBase58(),
-        'OfferPrice:', offerInfo.offerPrice.toNumber(), 'ByToken:', offerInfo.byToken.toNumber());
+        'OfferPrice:', offerInfo.offerPrice.toNumber());
 
     tx.add(program.instruction.acceptOffer(
         bump, nft_bump, offer_bump, buyer_bump, seller_bump, escrow_bump, {
@@ -1135,8 +973,6 @@ export const createAcceptOfferTx = async (
             userNftTokenAccount: ret.destinationAccounts[0],
             destNftTokenAccount,
             escrowVault,
-            userTokenAccount: ret1.destinationAccounts[0],
-            escrowTokenAccount,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
@@ -1187,7 +1023,6 @@ export const createCreateAuctionTx = async (
     userAddress: PublicKey,
     startPrice: number,
     minIncrease: number,
-    byToken: boolean,
     endDate: number,
     program: anchor.Program,
     connection: Connection,
@@ -1232,11 +1067,11 @@ export const createCreateAuctionTx = async (
 
     if (instructions.length > 0) instructions.map((ix) => tx.add(ix));
     console.log('==>creating Auction',
-        mint.toBase58(), startPrice, minIncrease, byToken, endDate);
+        mint.toBase58(), startPrice, minIncrease, endDate);
 
     tx.add(program.instruction.createAuction(
         bump, nft_bump, new anchor.BN(startPrice),
-        new anchor.BN(minIncrease), new anchor.BN(byToken ? 1 : 0),
+        new anchor.BN(minIncrease),
         new anchor.BN(endDate), {
         accounts: {
             owner: userAddress,
@@ -1259,29 +1094,10 @@ export const createPlaceBidTx = async (
     userAddress: PublicKey,
     price: number,
     program: anchor.Program,
-    connection: Connection,
 ) => {
-    let ret = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        userAddress,
-        [ABB_TOKEN_MINT]
-    );
-
     let auctionInfo = await getAuctionDataState(mint, program);
 
     let tx = new Transaction();
-    let userTokenAccount = ret.destinationAccounts[0];
-    if (!await isExistAccount(userTokenAccount, connection)) {
-        try {
-            let accountOfABB = await getTokenAccount(ABB_TOKEN_MINT, userAddress, connection);
-            userTokenAccount = accountOfABB;
-        } catch (e) {
-            if (!auctionInfo.byToken.toNumber()) tx.add(ret.instructions[0]);
-            else throw 'No ABB Token Account for this user';
-        }
-    }
-    console.log("Bidder ABB Account = ", userTokenAccount.toBase58());
 
     const [nftData, nft_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
@@ -1293,35 +1109,15 @@ export const createPlaceBidTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        escrowVault,
-        [ABB_TOKEN_MINT]
-    );
-
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
     console.log('escrowVault = ', escrowVault.toBase58());
-    console.log("EscrowVault ABB Account = ", ret1.destinationAccounts[0].toBase58());
 
     let outBidder = userAddress;
-    let outBidderTokenAccount = userTokenAccount;
     if (auctionInfo.lastBidder.toBase58() != PublicKey.default.toBase58()) {
         outBidder = auctionInfo.lastBidder;
-
-        let ret2 = await getATokenAccountsNeedCreate(
-            connection,
-            userAddress,
-            outBidder,
-            [ABB_TOKEN_MINT]
-        );
-        outBidderTokenAccount = ret2.destinationAccounts[0];
-        if (ret2.instructions.length > 0) ret2.instructions.map((ix) => tx.add(ix));
     }
 
     console.log('==> placing Bid', mint.toBase58(),
-        userAddress.toBase58(), 'Price:', price, 'ByToken:', auctionInfo.byToken.toNumber(),
-        'LastBidder:', outBidder.toBase58(), 'LastBidderATA:', outBidderTokenAccount.toBase58());
+        userAddress.toBase58(), 'Price:', price, 'LastBidder:', outBidder.toBase58());
     tx.add(program.instruction.placeBid(
         nft_bump, escrow_bump, new anchor.BN(price), {
         accounts: {
@@ -1329,11 +1125,7 @@ export const createPlaceBidTx = async (
             auctionDataInfo: nftData,
             nftMint: mint,
             escrowVault,
-            bidderTokenAccount: userTokenAccount,
-            escrowTokenAccount: ret1.destinationAccounts[0],
             outBidder,
-            outBidderTokenAccount,
-            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
         },
         instructions: [],
@@ -1377,20 +1169,10 @@ export const createClaimAuctionTx = async (
     let userTokenAccount = ret.destinationAccounts[0];
     let destNftTokenAccount = await getAssociatedTokenAccount(globalAuthority, mint);
     console.log("Bidder NFT Account = ", userTokenAccount.toBase58());
-
-    let escrowTokenAccount = await getAssociatedTokenAccount(escrowVault, ABB_TOKEN_MINT);
     
     let auctionInfo = await getAuctionDataState(mint, program);
-    let creator = auctionInfo.creator;
-    let ret1 = await getATokenAccountsNeedCreate(
-        connection,
-        userAddress,
-        creator,
-        [ABB_TOKEN_MINT]
-    );
-        
+    let creator = auctionInfo.creator;        
     if (ret.instructions.length > 0) ret.instructions.map((ix) => tx.add(ix));
-    if (ret1.instructions.length > 0) ret1.instructions.map((ix) => tx.add(ix));
     
     const [userPool, user_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(USER_DATA_SEED), userAddress.toBuffer()],
@@ -1403,15 +1185,10 @@ export const createClaimAuctionTx = async (
     );
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
-    if (auctionInfo.byToken.toNumber()) {
-        for (let idx in treasuryAccounts) {
-            treasuryAccounts[idx] = await getAssociatedTokenAccount(treasuryAccounts[idx], ABB_TOKEN_MINT);
-        }
-    }
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
 
     console.log('==> claiming Auction', mint.toBase58(), userAddress.toBase58(),
-        'Creator:', creator.toBase58(), 'creatorATA:', ret1.destinationAccounts[0].toBase58());
+        'Creator:', creator.toBase58());
     tx.add(program.instruction.claimAuction(
         bump, nft_bump, escrow_bump, {
         accounts: {
@@ -1422,9 +1199,7 @@ export const createClaimAuctionTx = async (
             destNftTokenAccount,
             nftMint: mint,
             escrowVault,
-            escrowTokenAccount,
             creator,
-            creatorTokenAccount: ret1.destinationAccounts[0],
             bidderUserPool: userPool,
             creatorUserPool,
             tokenProgram: TOKEN_PROGRAM_ID,

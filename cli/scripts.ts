@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
-import { AuctionData, AUCTION_DATA_SEED, GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, OfferData, OFFER_DATA_SEED, SellData, SELL_DATA_SEED, UserData, USER_DATA_SEED } from '../lib/types';
+import { AuctionData, AUCTION_DATA_SEED, GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, OfferData, OFFER_DATA_SEED, SellData, SELL_DATA_SEED, UserData } from '../lib/types';
 import {IDL as MarketplaceIDL} from "../target/types/mds_marketplace";
 import {
     createAcceptOfferTx,
@@ -155,10 +155,9 @@ export const initAuctionData = async (
 
 export const updateFee = async (
     solFee: number,
-    tokenFee: number,
 ) => {
-    console.log(solFee, tokenFee);
-    const tx = await createUpdateFeeTx(payer.publicKey, program, solFee, tokenFee);
+    console.log(solFee);
+    const tx = await createUpdateFeeTx(payer.publicKey, program, solFee);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -174,7 +173,7 @@ export const addTreasury = async (
 ) => {
     console.log(treasury.toBase58(), rate);
 
-    const tx = await createAddTreasuryTx(payer.publicKey, treasury, rate, program, solConnection);
+    const tx = await createAddTreasuryTx(payer.publicKey, treasury, rate, program);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -201,17 +200,16 @@ export const removeTreasury = async (
 
 export const depositEscrow = async (
     sol: number,
-    token: number,
 ) => {
     let userAddress = payer.publicKey;
-    console.log(userAddress.toBase58(), sol, token);
+    console.log(userAddress.toBase58(), sol);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
         return;
     }
 
-    const tx = await createDepositTx(userAddress, sol, token, program, solConnection);
+    const tx = await createDepositTx(userAddress, sol, program);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -223,17 +221,16 @@ export const depositEscrow = async (
 
 export const withdrawEscrow = async (
     sol: number,
-    token: number,
 ) => {
     let userAddress = payer.publicKey;
-    console.log(userAddress.toBase58(), sol, token);
+    console.log(userAddress.toBase58(), sol);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
         return;
     }
 
-    const tx = await createWithdrawTx(userAddress, sol, token, program, solConnection);
+    const tx = await createWithdrawTx(userAddress, sol, program);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -246,9 +243,8 @@ export const withdrawEscrow = async (
 export const listNftForSale = async (
     mint: PublicKey,
     priceSol: number,
-    priceToken: number,
 ) => {
-    console.log(mint.toBase58(), priceSol, priceToken);
+    console.log(mint.toBase58(), priceSol);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
@@ -266,7 +262,7 @@ export const listNftForSale = async (
         await initSellData(mint);
     }
 
-    const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, priceSol, priceToken);
+    const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, priceSol);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -298,9 +294,8 @@ export const delistNft = async (
 
 export const purchase = async (
     mint: PublicKey,
-    byToken: boolean,
 ) => {
-    console.log(mint.toBase58(), byToken);
+    console.log(mint.toBase58());
     
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
@@ -309,7 +304,7 @@ export const purchase = async (
 
     const globalPool: GlobalPool = await getGlobalState(program);
 
-    const tx = await createPurchaseTx(mint, payer.publicKey, byToken, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
+    const tx = await createPurchaseTx(mint, payer.publicKey, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -335,9 +330,8 @@ export const initOfferData = async (
 export const makeOffer = async (
     mint: PublicKey,
     price: number,
-    byToken: boolean,
 ) => {
-    console.log(mint.toBase58(), price, byToken);
+    console.log(mint.toBase58(), price);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
@@ -355,7 +349,7 @@ export const makeOffer = async (
         await initOfferData(mint);
     }
 
-    const tx = await createMakeOfferTx(mint, payer.publicKey, price, byToken, program, solConnection);
+    const tx = await createMakeOfferTx(mint, payer.publicKey, price, program);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -413,9 +407,8 @@ export const createAuction = async (
     startPrice: number,
     minIncrease: number,
     endDate: number,
-    byToken: boolean,
 ) => {
-    console.log(mint.toBase58(), startPrice, minIncrease, endDate, byToken);
+    console.log(mint.toBase58(), startPrice, minIncrease, endDate);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
@@ -438,7 +431,6 @@ export const createAuction = async (
         payer.publicKey,
         startPrice,
         minIncrease,
-        byToken,
         endDate,
         program,
         solConnection,
@@ -463,7 +455,7 @@ export const placeBid = async (
         return;
     }
 
-    const tx = await createPlaceBidTx(mint, payer.publicKey, price, program, solConnection);
+    const tx = await createPlaceBidTx(mint, payer.publicKey, price, program);
     const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
@@ -524,7 +516,6 @@ export const getNFTPoolInfo = async (
       seller: nftData.seller.toBase58(),
       collection: nftData.collection.toBase58(),
       priceSol: nftData.priceSol.toNumber(),
-      priceToken: nftData.priceToken.toNumber(),
       listedDate: nftData.listedDate.toNumber(),
       active: nftData.active.toNumber(),
     };
@@ -540,7 +531,6 @@ export const getOfferDataInfo = async (
       buyer: offerData.buyer.toBase58(),
       offerPrice: offerData.offerPrice.toNumber(),
       offerListingDate: offerData.offerListingDate.toNumber(),
-      byToken: offerData.byToken.toNumber(),
       active: offerData.active.toNumber(),
     };
 }
@@ -555,7 +545,6 @@ export const getAuctionDataInfo = async (
       startPrice: auctionData.startPrice.toNumber(),
       minIncreaseAmount: auctionData.minIncreaseAmount.toNumber(),
       endDate: auctionData.endDate.toNumber(),
-      byToken: auctionData.byToken.toNumber(),
       lastBidder: auctionData.lastBidder.toBase58(),
       lastBidDate: auctionData.lastBidDate.toNumber(),
       highestBid: auctionData.highestBid.toNumber(),
@@ -570,9 +559,7 @@ export const getUserPoolInfo = async (
     return {
       address: userData.address.toBase58(),
       escrowSol: userData.escrowSolBalance.toNumber(),
-      escrowTokenBalance: userData.escrowTokenBalance.toNumber(),
       tradedVolume: userData.tradedVolume.toNumber(),
-      tradedTokenVolume: userData.tradedTokenVolume.toNumber(),
     };
 }
 
@@ -581,7 +568,6 @@ export const getGlobalInfo = async () => {
     const result = {
       admin: globalPool.superAdmin.toBase58(),
       marketFeeSol: globalPool.marketFeeSol.toNumber(),
-      marketFeeToken: globalPool.marketFeeToken.toNumber(),
       teamCount: globalPool.teamCount.toNumber(),
       teamTreasury: globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toBase58()),
       treasuryRate: globalPool.treasuryRate.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toNumber()),

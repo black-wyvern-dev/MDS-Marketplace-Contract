@@ -8,7 +8,7 @@ import {
     Keypair,
 } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, Token, MintLayout } from "@solana/spl-token";
-import { ABB_TOKEN_DECIMAL, ABB_TOKEN_MINT, ESCROW_VAULT_SEED, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, USER_DATA_SEED } from './types';
+import { ESCROW_VAULT_SEED, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, USER_DATA_SEED } from './types';
 
 export const METAPLEX = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
 
@@ -232,13 +232,10 @@ export const getEscrowBalance = async (connection: Connection) => {
 
   const res = await connection.getBalance(escrowVault);
   
-  const escrowATA = await getAssociatedTokenAccount(escrowVault, ABB_TOKEN_MINT);
-  console.log('Escrow:', escrowVault.toBase58(), 'EscrowATA:', escrowATA.toBase58());
-  const token = await getTokenAccountBalance(escrowATA, connection);
+  console.log('Escrow:', escrowVault.toBase58());
 
   return {
     sol: res,
-    token: token * ABB_TOKEN_DECIMAL,
   }
 }
 

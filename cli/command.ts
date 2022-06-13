@@ -33,8 +33,6 @@ import {
   removeTreasury,
   initUserPool,
 } from "./scripts";
-import { ABB_TOKEN_DECIMAL } from "../lib/types";
-import { getAllListedNFTs } from "../lib/scripts";
 
 dotenv.config({ path: __dirname+'/../.env' });
 
@@ -70,13 +68,11 @@ programCommand('user_status')
 
 programCommand('update_fee')
   .option('-s, --sol_fee <number>', 'marketplace trading by sol fee as permyraid')
-  .option('-t, --token_fee <number>', 'marketplace trading by token fee as permyraid')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
       env,
       sol_fee,
-      token_fee,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -86,12 +82,8 @@ programCommand('update_fee')
       console.log("Error Sol Fee Input");
       return;
     }
-    if (token_fee === undefined || isNaN(parseInt(token_fee))) {
-      console.log("Error Token Fee Input");
-      return;
-    }
     
-    await updateFee(parseInt(sol_fee), parseInt(token_fee));
+    await updateFee(parseInt(sol_fee));
 });
 
 programCommand('add_treasury')
@@ -136,13 +128,11 @@ programCommand('remove_treasury')
 
 programCommand('deposit')
   .option('-s, --sol <number>', 'deposit sol amount')
-  .option('-t, --token <number>', 'deposit token amount')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
       env,
       sol,
-      token,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -152,17 +142,12 @@ programCommand('deposit')
       console.log("Error Sol Amount input");
       return;
     }
-    if (token === undefined || isNaN(parseFloat(token))) {
-      console.log("Error Token Amount input");
-      return;
-    }
     
-    await depositEscrow(parseFloat(sol) * LAMPORTS_PER_SOL, parseFloat(token) * ABB_TOKEN_DECIMAL);
+    await depositEscrow(parseFloat(sol) * LAMPORTS_PER_SOL);
 });
 
 programCommand('withdraw')
   .option('-s, --sol <number>', 'withdraw sol amount')
-  .option('-t, --token <number>', 'withdraw token amount')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
@@ -178,25 +163,19 @@ programCommand('withdraw')
       console.log("Error Sol Amount input");
       return;
     }
-    if (token === undefined || isNaN(parseFloat(token))) {
-      console.log("Error Token Amount input");
-      return;
-    }
     
-    await withdrawEscrow(parseFloat(sol) * LAMPORTS_PER_SOL, parseFloat(token) * ABB_TOKEN_DECIMAL);
+    await withdrawEscrow(parseFloat(sol) * LAMPORTS_PER_SOL);
 });
 
 programCommand('list')
   .option('-a, --address <string>', 'nft mint pubkey')
   .option('-p, --price_sol <number>', 'sell sol price')
-  .option('-t, --price_token <number>', 'sell token price')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
       env,
       address,
       price_sol,
-      price_token,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -210,12 +189,8 @@ programCommand('list')
       console.log("Error Sol Price input");
       return;
     }
-    if (price_token === undefined || isNaN(parseFloat(price_token))) {
-      console.log("Error Token Price input");
-      return;
-    }
     
-    await listNftForSale(new PublicKey(address), parseFloat(price_sol) * LAMPORTS_PER_SOL, parseFloat(price_token) * ABB_TOKEN_DECIMAL);
+    await listNftForSale(new PublicKey(address), parseFloat(price_sol) * LAMPORTS_PER_SOL);
 });
 
 programCommand('delist')
@@ -240,13 +215,11 @@ programCommand('delist')
 
 programCommand('purchase')
   .option('-a, --address <string>', 'nft mint pubkey')
-  .option('-t, --by_token <number>', 'purchase nft By ABB token')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
       env,
       address,
-      by_token,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -256,25 +229,19 @@ programCommand('purchase')
       console.log("Error Mint input");
       return;
     }
-    if (by_token === undefined || isNaN(parseInt(by_token)) || parseInt(by_token) > 1) {
-      console.log("Error By Token input");
-      return;
-    }
     
-    await purchase(new PublicKey(address), parseInt(by_token) == 1);
+    await purchase(new PublicKey(address));
 });
 
 programCommand('make_offer')
   .option('-a, --address <string>', 'nft mint pubkey')
   .option('-p, --price <number>', 'offer price')
-  .option('-t, --by_token <number>', 'offer by token')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
       env,
       address,
       price,
-      by_token,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -288,13 +255,8 @@ programCommand('make_offer')
       console.log("Error Offer Price input");
       return;
     }
-    if (by_token === undefined || isNaN(parseInt(by_token)) || parseInt(by_token) > 1) {
-      console.log("Error By Token input");
-      return;
-    }
     
-    let byToken: boolean = parseInt(by_token) == 1 ? true : false;
-    await makeOffer(new PublicKey(address), parseFloat(price) * (byToken ? ABB_TOKEN_DECIMAL : LAMPORTS_PER_SOL), byToken);
+    await makeOffer(new PublicKey(address), parseFloat(price) * LAMPORTS_PER_SOL);
 });
 
 programCommand('cancel_offer')
@@ -349,7 +311,6 @@ programCommand('create_auction')
   .option('-p, --start_price <number>', 'start price')
   .option('-m, --min_increase <number>', 'min increase amount')
   .option('-d, --end_date <number>', 'end date timestamp')
-  .option('-t, --by_token <number>', 'auction by token')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
@@ -358,7 +319,6 @@ programCommand('create_auction')
       start_price,
       min_increase,
       end_date,
-      by_token,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -380,18 +340,12 @@ programCommand('create_auction')
       console.log("Error Auction End Date input");
       return;
     }
-    if (by_token === undefined || isNaN(parseInt(by_token)) || parseInt(by_token) > 1) {
-      console.log("Error By Token input");
-      return;
-    }
     
-    let byToken: boolean = parseInt(by_token) == 1 ? true : false;
     await createAuction(
       new PublicKey(address),
-      parseFloat(start_price) * (byToken ? ABB_TOKEN_DECIMAL : LAMPORTS_PER_SOL),
-      parseFloat(min_increase) * (byToken ? ABB_TOKEN_DECIMAL : LAMPORTS_PER_SOL),
+      parseFloat(start_price) * LAMPORTS_PER_SOL,
+      parseFloat(min_increase) * LAMPORTS_PER_SOL,
       parseInt(end_date),
-      byToken,
     );
 });
 

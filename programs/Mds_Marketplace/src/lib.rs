@@ -10,7 +10,6 @@ use anchor_spl::{
     token::{self, Token, TokenAccount, Transfer },
 };
 use metaplex_token_metadata::state::Metadata;
-use spl_associated_token_account;
 
 pub mod account;
 pub mod error;
@@ -20,7 +19,7 @@ use account::*;
 use error::*;
 use constants::*;
 
-declare_id!("3TfzeR3fQsoHzaXBkr84WWoYcqseJgUtqzppbu5wafMS");
+declare_id!("C29hER4SXQr3atHsuCrRmLAkXBpxvfLMCNeXg2TRTd9o");
 
 #[program]
 pub mod mds_marketplace {
@@ -35,15 +34,13 @@ pub mod mds_marketplace {
         ctx: Context<SetTreshold>,
         _global_bump: u8,
         sol_fee: u64,
-        token_fee: u64,
     ) -> Result<()> {
         let global_authority = &mut ctx.accounts.global_authority;
         // Assert payer is the superadmin
         require!(global_authority.super_admin == ctx.accounts.admin.key(), MarketplaceError::InvalidSuperOwner);
-        require!(sol_fee < PERMYRIAD && token_fee < PERMYRIAD, MarketplaceError::InvalidFeePercent);
+        require!(sol_fee < PERMYRIAD, MarketplaceError::InvalidFeePercent);
 
         global_authority.market_fee_sol = sol_fee;
-        global_authority.market_fee_token = token_fee;
         Ok(())
     }
     pub fn add_team_treasury(
@@ -126,7 +123,6 @@ pub mod mds_marketplace {
         _global_bump: u8,
         _sell_bump: u8,
         price_sol: u64,
-        price_token: u64,
     ) -> Result<()> {
         let sell_data_info = &mut ctx.accounts.sell_data_info;
         msg!("Mint: {:?}", sell_data_info.mint);
@@ -169,7 +165,6 @@ pub mod mds_marketplace {
 
         sell_data_info.seller = ctx.accounts.owner.key();
         sell_data_info.price_sol = price_sol;
-        sell_data_info.price_token = price_token;
         sell_data_info.listed_date = timestamp;
         sell_data_info.active = 1;
 
@@ -249,15 +244,13 @@ pub mod mds_marketplace {
         _nft_bump: u8,
         _seller_bump: u8,
         _buyer_bump: u8,
-        by_token: u8,
     ) -> Result<()> {
         // By Token should be zero or one
-        require!(by_token < 2, MarketplaceError::InvalidParamInput);
         let sell_data_info = &mut ctx.accounts.sell_data_info;
         let buyer_user_pool = &mut ctx.accounts.buyer_user_pool;
         let seller_user_pool = &mut ctx.accounts.seller_user_pool;
 
-        msg!("Purchase Mint: {:?}, By Token: {}", sell_data_info.mint, by_token == 1);
+        msg!("Purchase Mint: {:?}", sell_data_info.mint);
 
         // Assert NFT Pubkey with Sell Data PDA Mint
         require!(ctx.accounts.nft_mint.key().eq(&sell_data_info.mint), MarketplaceError::InvalidNFTDataAcount);
@@ -273,8 +266,6 @@ pub mod mds_marketplace {
 
         let nft_token_account_info = &mut &ctx.accounts.user_nft_token_account;
         let dest_nft_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
-        let buyer_token_account_info = &mut &ctx.accounts.user_token_account;
-        let seller_token_account_info = &mut &ctx.accounts.seller_token_account;
         let token_program = &mut &ctx.accounts.token_program;
         let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
         let signer = &[&seeds[..]];
@@ -285,73 +276,31 @@ pub mod mds_marketplace {
         require!(global_authority.team_count > 0, MarketplaceError::NoTeamTreasuryYet);
         require!(global_authority.team_count == remaining_accounts.len() as u64, MarketplaceError::TeamTreasuryCountMismatch);
 
-        if by_token == 0 {
-            let fee_amount: u64 = sell_data_info.price_sol * global_authority.market_fee_sol / PERMYRIAD;
+        let fee_amount: u64 = sell_data_info.price_sol * global_authority.market_fee_sol / PERMYRIAD;
 
-            invoke(&system_instruction::transfer(ctx.accounts.buyer.key, ctx.accounts.seller.key, sell_data_info.price_sol - fee_amount),
-                &[
-                    ctx.accounts.buyer.to_account_info().clone(),
-                    ctx.accounts.seller.to_account_info().clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
+        invoke(&system_instruction::transfer(ctx.accounts.buyer.key, ctx.accounts.seller.key, sell_data_info.price_sol - fee_amount),
+            &[
+                ctx.accounts.buyer.to_account_info().clone(),
+                ctx.accounts.seller.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ]
+        )?;
+
+        let mut i = 0;
+        // This is not expensive cuz the max count is 8
+        for team_account in remaining_accounts {
+            require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
+            invoke(&system_instruction::transfer(ctx.accounts.buyer.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
+            &[
+                ctx.accounts.buyer.to_account_info().clone(),
+                team_account.clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
                 ]
             )?;
-
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            for team_account in remaining_accounts {
-                require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
-                invoke(&system_instruction::transfer(ctx.accounts.buyer.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
-                &[
-                    ctx.accounts.buyer.to_account_info().clone(),
-                    team_account.clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
-                    ]
-                )?;
-                i += 1;
-            }
-            buyer_user_pool.traded_volume += sell_data_info.price_sol;
-            seller_user_pool.traded_volume += sell_data_info.price_sol;
-        } else {
-            let fee_amount: u64 = sell_data_info.price_token * global_authority.market_fee_token / PERMYRIAD;
-
-            let cpi_accounts = Transfer {
-                from: buyer_token_account_info.to_account_info().clone(),
-                to: seller_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.buyer.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-                sell_data_info.price_token - fee_amount,
-            )?;
-
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            // remaining_accounts should be tokenAccount for token purchasing
-            for team_token_account in remaining_accounts {
-                // Get ATA of Treasury Account
-                let team_ata = spl_associated_token_account::get_associated_token_address(
-                    &global_authority.team_treasury[i], &REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap()
-                );
-                // Assert Provied Remaining Account is Treasury ATA
-                require!(team_token_account.key().eq(&team_ata), MarketplaceError::TeamTreasuryAddressMismatch);
-                // Assert Treasury ATA is Initialized
-                require!(team_token_account.owner == &token::ID, MarketplaceError::TeamTreasuryAddressMismatch);
-
-                let cpi_accounts = Transfer {
-                    from: buyer_token_account_info.to_account_info().clone(),
-                    to: team_token_account.clone(),
-                    authority: ctx.accounts.buyer.to_account_info()
-                };
-                token::transfer(
-                    CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-                    fee_amount * global_authority.treasury_rate[i] / PERMYRIAD,
-                )?;
-    
-                i += 1;
-            }
-            buyer_user_pool.traded_token_volume += sell_data_info.price_token;
-            seller_user_pool.traded_token_volume += sell_data_info.price_token;
+            i += 1;
         }
+        buyer_user_pool.traded_volume += sell_data_info.price_sol;
+        seller_user_pool.traded_volume += sell_data_info.price_sol;
 
         let cpi_accounts = Transfer {
             from: dest_nft_token_account_info.to_account_info().clone(),
@@ -388,44 +337,24 @@ pub mod mds_marketplace {
         _user_bump: u8,
         _escrow_bump: u8,
         sol: u64,
-        token: u64,
     ) -> Result<()> {
-        require!(sol > 0 || token > 0, MarketplaceError::InvalidParamInput);
+        require!(sol > 0, MarketplaceError::InvalidParamInput);
 
         let user_pool = &mut ctx.accounts.user_pool;
-        msg!("User: {:?}, Sol Deposit: {}, Token Deposit: {}", user_pool.address, sol, token);
+        msg!("User: {:?}, Sol Deposit: {}", user_pool.address, sol);
 
         // Assert User Pubkey with User Data PDA Address
         require!(ctx.accounts.owner.key().eq(&user_pool.address), MarketplaceError::InvalidOwner);
 
-        let user_token_account_info = &mut &ctx.accounts.user_token_account;
-        let vault_token_account_info = &mut &ctx.accounts.escrow_token_account;
-        let token_program = &mut &ctx.accounts.token_program;
+        invoke(&system_instruction::transfer(ctx.accounts.owner.key, ctx.accounts.escrow_vault.key, sol),
+            &[
+                ctx.accounts.owner.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ]
+        )?;
+        user_pool.escrow_sol_balance += sol;
 
-        if sol > 0 {
-            invoke(&system_instruction::transfer(ctx.accounts.owner.key, ctx.accounts.escrow_vault.key, sol),
-                &[
-                    ctx.accounts.owner.to_account_info().clone(),
-                    ctx.accounts.escrow_vault.to_account_info().clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
-                ]
-            )?;
-            user_pool.escrow_sol_balance += sol;
-        }
-
-        if token > 0 {
-            let cpi_accounts = Transfer {
-                from: user_token_account_info.to_account_info().clone(),
-                to: vault_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.owner.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-                token,
-            )?;
-            user_pool.escrow_token_balance += token;
-        }
-        
         Ok(())
     }  
 
@@ -434,46 +363,27 @@ pub mod mds_marketplace {
         _user_bump: u8,
         escrow_bump: u8,
         sol: u64,
-        token: u64,
     ) -> Result<()> {
-        require!(sol > 0 || token > 0, MarketplaceError::InvalidParamInput);
+        require!(sol > 0, MarketplaceError::InvalidParamInput);
 
         let user_pool = &mut ctx.accounts.user_pool;
-        msg!("User: {:?}, Sol Withdraw: {}, Token Withdraw: {}", user_pool.address, sol, token);
+        msg!("User: {:?}, Sol Withdraw: {}", user_pool.address, sol);
 
         // Assert User Pubkey with User Data PDA Address
         require!(ctx.accounts.owner.key().eq(&user_pool.address), MarketplaceError::InvalidOwner);
 
-        let user_token_account_info = &mut &ctx.accounts.user_token_account;
-        let vault_token_account_info = &mut &ctx.accounts.escrow_token_account;
-        let token_program = &mut &ctx.accounts.token_program;
         let seeds = &[ESCROW_VAULT_SEED.as_bytes(), &[escrow_bump]];
         let signer = &[&seeds[..]];
 
-        if sol > 0 {
-            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.owner.key, sol),
-                &[
-                    ctx.accounts.owner.to_account_info().clone(),
-                    ctx.accounts.escrow_vault.to_account_info().clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
-                ],
-                signer,
-            )?;
-            user_pool.escrow_sol_balance -= sol;
-        }
-
-        if token > 0 {
-            let cpi_accounts = Transfer {
-                from: vault_token_account_info.to_account_info().clone(),
-                to: user_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.escrow_vault.to_account_info().clone(),
-            };
-            token::transfer(
-                CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                token,
-            )?;
-            user_pool.escrow_token_balance -= token;
-        }
+        invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.owner.key, sol),
+            &[
+                ctx.accounts.owner.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ],
+            signer,
+        )?;
+        user_pool.escrow_sol_balance -= sol;
         
         Ok(())
     }
@@ -492,10 +402,7 @@ pub mod mds_marketplace {
         _user_bump: u8,
         _escrow_bump: u8,
         price: u64,
-        by_token: u64,
     ) -> Result<()> {
-        // By Token Param should be zero or one
-        require!(by_token < 2, MarketplaceError::InvalidParamInput);
         let sell_data_info = &mut ctx.accounts.sell_data_info;
         msg!("Mint: {:?}, buyer: {:?}", sell_data_info.mint, ctx.accounts.owner.key());
         
@@ -509,50 +416,27 @@ pub mod mds_marketplace {
         // Assert Already delisted NFT
         require!(sell_data_info.active == 1, MarketplaceError::OfferForNotListedNFT);
         // Offer price range is from x1 to x0.5
-        if by_token == 1 {
-            require!(sell_data_info.price_token > price && sell_data_info.price_token / 2 <= price, MarketplaceError::InvalidOfferPrice);
-        } else {
-            require!(sell_data_info.price_sol > price && sell_data_info.price_sol / 2 <= price, MarketplaceError::InvalidOfferPrice);
-        }
+        require!(sell_data_info.price_sol > price && sell_data_info.price_sol / 2 <= price, MarketplaceError::InvalidOfferPrice);
 
         offer_data_info.offer_listing_date = sell_data_info.listed_date;
         offer_data_info.offer_price = price;
-        offer_data_info.by_token = by_token;
         offer_data_info.active = 1;
 
         let user_pool = &mut ctx.accounts.user_pool;
-        msg!("User: {:?}, Deposit: {}, By Token: {}", user_pool.address, price, by_token);
+        msg!("User: {:?}, Deposit: {},", user_pool.address, price);
 
         // Assert User Pubkey with User Data PDA Address
         require!(ctx.accounts.owner.key().eq(&user_pool.address), MarketplaceError::InvalidOwner);
 
-        let user_token_account_info = &mut &ctx.accounts.user_token_account;
-        let vault_token_account_info = &mut &ctx.accounts.escrow_token_account;
-        let token_program = &mut &ctx.accounts.token_program;
+        invoke(&system_instruction::transfer(ctx.accounts.owner.key, ctx.accounts.escrow_vault.key, price),
+            &[
+                ctx.accounts.owner.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ]
+        )?;
+        user_pool.escrow_sol_balance += price;
 
-        if by_token == 0 {
-            invoke(&system_instruction::transfer(ctx.accounts.owner.key, ctx.accounts.escrow_vault.key, price),
-                &[
-                    ctx.accounts.owner.to_account_info().clone(),
-                    ctx.accounts.escrow_vault.to_account_info().clone(),
-                    ctx.accounts.system_program.to_account_info().clone(),
-                ]
-            )?;
-            user_pool.escrow_sol_balance += price;
-        }
-
-        if by_token == 1 {
-            let cpi_accounts = Transfer {
-                from: user_token_account_info.to_account_info().clone(),
-                to: vault_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.owner.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-                price,
-            )?;
-            user_pool.escrow_token_balance += price;
-        }
         Ok(())
     }
     
@@ -609,31 +493,21 @@ pub mod mds_marketplace {
         // Assert Offer provided date with the NFT Listed Date
         require!(offer_data_info.offer_listing_date == sell_data_info.listed_date, MarketplaceError::OfferForExpiredListingNFT);
 
-        msg!("Offer Mint: {:?}, Seller: {:?}, Buyer: {:?}, Price: {}, ByToken: {}",
+        msg!("Offer Mint: {:?}, Seller: {:?}, Buyer: {:?}, Price: {}",
             offer_data_info.mint,
             sell_data_info.seller,
             offer_data_info.buyer,
             offer_data_info.offer_price,
-            offer_data_info.by_token,
         );
 
         offer_data_info.active = 0;
         sell_data_info.active = 0;
 
-        if offer_data_info.by_token == 1 {
-            require!(offer_data_info.offer_price <= buyer_user_pool.escrow_token_balance, MarketplaceError::InsufficientBuyerTokenBalance);
-            buyer_user_pool.escrow_token_balance -= offer_data_info.offer_price;
-            buyer_user_pool.traded_token_volume += offer_data_info.offer_price;
-            seller_user_pool.traded_token_volume += offer_data_info.offer_price;
-        } else {
-            require!(offer_data_info.offer_price <= buyer_user_pool.escrow_sol_balance, MarketplaceError::InsufficientBuyerSolBalance);
-            buyer_user_pool.escrow_sol_balance -= offer_data_info.offer_price;
-            buyer_user_pool.traded_volume += offer_data_info.offer_price;
-            seller_user_pool.traded_volume += offer_data_info.offer_price;
-        }
+        require!(offer_data_info.offer_price <= buyer_user_pool.escrow_sol_balance, MarketplaceError::InsufficientBuyerSolBalance);
+        buyer_user_pool.escrow_sol_balance -= offer_data_info.offer_price;
+        buyer_user_pool.traded_volume += offer_data_info.offer_price;
+        seller_user_pool.traded_volume += offer_data_info.offer_price;
 
-        let user_token_account_info = &mut &ctx.accounts.user_token_account;
-        let vault_token_account_info = &mut &ctx.accounts.escrow_token_account;
         let token_program = &mut &ctx.accounts.token_program;
         let seeds = &[ESCROW_VAULT_SEED.as_bytes(), &[escrow_bump]];
         let signer = &[&seeds[..]];
@@ -643,71 +517,32 @@ pub mod mds_marketplace {
         require!(global_authority.team_count > 0, MarketplaceError::NoTeamTreasuryYet);
         require!(global_authority.team_count == remaining_accounts.len() as u64, MarketplaceError::TeamTreasuryCountMismatch);
 
-        if offer_data_info.by_token == 0 {
-            let fee_amount: u64 = offer_data_info.offer_price * global_authority.market_fee_sol / PERMYRIAD;
+        let fee_amount: u64 = offer_data_info.offer_price * global_authority.market_fee_sol / PERMYRIAD;
 
-            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.seller.key, offer_data_info.offer_price - fee_amount),
+        invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.seller.key, offer_data_info.offer_price - fee_amount),
+            &[
+                ctx.accounts.seller.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ],
+            signer,
+        )?;
+        
+        let mut i = 0;
+        // This is not expensive cuz the max count is 8
+        for team_account in remaining_accounts {
+            // Assert Provided Remaining Account is Treasury
+            require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
+            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
                 &[
-                    ctx.accounts.seller.to_account_info().clone(),
                     ctx.accounts.escrow_vault.to_account_info().clone(),
+                    team_account.clone(),
                     ctx.accounts.system_program.to_account_info().clone(),
                 ],
                 signer,
             )?;
-            
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            for team_account in remaining_accounts {
-                // Assert Provided Remaining Account is Treasury
-                require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
-                invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
-                    &[
-                        ctx.accounts.escrow_vault.to_account_info().clone(),
-                        team_account.clone(),
-                        ctx.accounts.system_program.to_account_info().clone(),
-                    ],
-                    signer,
-                )?;
-                i += 1;
-            }
-        } else {
-            let fee_amount: u64 = offer_data_info.offer_price * global_authority.market_fee_token / PERMYRIAD;
-
-            let cpi_accounts = Transfer {
-                from: vault_token_account_info.to_account_info().clone(),
-                to: user_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.escrow_vault.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                offer_data_info.offer_price - fee_amount,
-            )?;
-            
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            for team_account in remaining_accounts {
-                // Get ATA of Treasury Account
-                let team_ata = spl_associated_token_account::get_associated_token_address(
-                    &global_authority.team_treasury[i], &REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap()
-                );
-                // Assert Provied Remaining Account is Treasury ATA
-                require!(team_account.key().eq(&team_ata), MarketplaceError::TeamTreasuryAddressMismatch);
-                // Assert Treasury ATA is Initialized
-                require!(team_account.owner == &token::ID, MarketplaceError::TeamTreasuryAddressMismatch);
-
-                let cpi_accounts = Transfer {
-                    from: vault_token_account_info.to_account_info().clone(),
-                    to: team_account.to_account_info().clone(),
-                    authority: ctx.accounts.escrow_vault.to_account_info()
-                };
-                token::transfer(
-                    CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                    fee_amount * global_authority.treasury_rate[i] / PERMYRIAD,
-                )?;
-                i += 1;
-            }
+            i += 1;
         }
-
         let nft_token_account_info = &mut &ctx.accounts.user_nft_token_account;
         let dest_nft_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
         let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
@@ -755,11 +590,8 @@ pub mod mds_marketplace {
         _auction_bump: u8,
         start_price: u64,
         min_increase: u64,
-        by_token: u64,
         end_date: i64,
     ) -> Result<()> {
-        // By Token Param should be zero or one
-        require!(by_token < 2, MarketplaceError::InvalidParamInput);
         let auction_data_info = &mut ctx.accounts.auction_data_info;
         msg!("Mint: {:?}", auction_data_info.mint);
 
@@ -772,7 +604,6 @@ pub mod mds_marketplace {
         auction_data_info.creator = ctx.accounts.owner.key();
         auction_data_info.start_price = start_price;
         auction_data_info.min_increase_amount = min_increase;
-        auction_data_info.by_token = by_token;
         auction_data_info.end_date = end_date;
         auction_data_info.last_bidder = Pubkey::default();
         auction_data_info.highest_bid = start_price;
@@ -822,57 +653,29 @@ pub mod mds_marketplace {
         
         msg!("Mint: {:?}, Bidder: {:?}", auction_data_info.mint, ctx.accounts.bidder.key());
 
-        let user_token_account_info = &mut &ctx.accounts.bidder_token_account;
-        let vault_token_account_info = &mut &ctx.accounts.escrow_token_account;
-        let token_program = &mut &ctx.accounts.token_program;
         let seeds = &[ESCROW_VAULT_SEED.as_bytes(), &[escrow_bump]];
         let signer = &[&seeds[..]];
 
-        if auction_data_info.by_token == 0 {
-            // Refund Last Bidder Escrow
-            if !Pubkey::default().eq(&auction_data_info.last_bidder) {
-                invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.out_bidder.key, auction_data_info.highest_bid),
-                    &[
-                        ctx.accounts.out_bidder.to_account_info().clone(),
-                        ctx.accounts.escrow_vault.to_account_info().clone(),
-                        ctx.accounts.system_program.to_account_info().clone(),
-                    ],
-                    signer,
-                )?;
-            }
-            // Escrow New Bidder funds
-            invoke(&system_instruction::transfer(ctx.accounts.bidder.key, ctx.accounts.escrow_vault.key, price),
+        // Refund Last Bidder Escrow
+        if !Pubkey::default().eq(&auction_data_info.last_bidder) {
+            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.out_bidder.key, auction_data_info.highest_bid),
                 &[
-                    ctx.accounts.bidder.to_account_info().clone(),
+                    ctx.accounts.out_bidder.to_account_info().clone(),
                     ctx.accounts.escrow_vault.to_account_info().clone(),
                     ctx.accounts.system_program.to_account_info().clone(),
-                ]
-            )?;
-        } else {
-            // Refund Last Bidder Escrow
-            if !Pubkey::default().eq(&auction_data_info.last_bidder) {
-                let cpi_accounts = Transfer {
-                    from: vault_token_account_info.to_account_info().clone(),
-                    to: ctx.accounts.out_bidder_token_account.to_account_info().clone(),
-                    authority: ctx.accounts.escrow_vault.to_account_info()
-                };
-                token::transfer(
-                    CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                    auction_data_info.highest_bid,
-                )?;
-            }
-            // Escrow New Bidder funds
-            let cpi_accounts = Transfer {
-                from: user_token_account_info.to_account_info().clone(),
-                to: vault_token_account_info.to_account_info().clone(),
-                authority: ctx.accounts.bidder.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-                price,
+                ],
+                signer,
             )?;
         }
-
+        // Escrow New Bidder funds
+        invoke(&system_instruction::transfer(ctx.accounts.bidder.key, ctx.accounts.escrow_vault.key, price),
+            &[
+                ctx.accounts.bidder.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ]
+        )?;
+        
         auction_data_info.last_bid_date = timestamp;
         auction_data_info.last_bidder = ctx.accounts.bidder.key();
         auction_data_info.highest_bid = price;
@@ -914,9 +717,9 @@ pub mod mds_marketplace {
         bidder_user_pool.traded_volume += auction_data_info.highest_bid;
         creator_user_pool.traded_volume += auction_data_info.highest_bid;
 
+        let token_program = &mut &ctx.accounts.token_program;
         let token_account_info = &mut &ctx.accounts.user_token_account;
         let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
-        let token_program = &mut &ctx.accounts.token_program;
         let seeds = &[ESCROW_VAULT_SEED.as_bytes(), &[escrow_bump]];
         let signer = &[&seeds[..]];
 
@@ -925,69 +728,31 @@ pub mod mds_marketplace {
         require!(global_authority.team_count > 0, MarketplaceError::NoTeamTreasuryYet);
         require!(global_authority.team_count == remaining_accounts.len() as u64, MarketplaceError::TeamTreasuryCountMismatch);
 
-        if auction_data_info.by_token == 0 {
-            let fee_amount: u64 = auction_data_info.highest_bid * global_authority.market_fee_sol / PERMYRIAD;
-            
-            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.creator.key, auction_data_info.highest_bid - fee_amount),
+        let fee_amount: u64 = auction_data_info.highest_bid * global_authority.market_fee_sol / PERMYRIAD;
+        
+        invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, ctx.accounts.creator.key, auction_data_info.highest_bid - fee_amount),
+            &[
+                ctx.accounts.creator.to_account_info().clone(),
+                ctx.accounts.escrow_vault.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+            ],
+            signer,
+        )?;
+        
+        let mut i = 0;
+        // This is not expensive cuz the max count is 8
+        for team_account in remaining_accounts {
+            // Assert Provided Remaining Account is Treasury
+            require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
+            invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
                 &[
-                    ctx.accounts.creator.to_account_info().clone(),
                     ctx.accounts.escrow_vault.to_account_info().clone(),
+                    team_account.clone(),
                     ctx.accounts.system_program.to_account_info().clone(),
                 ],
                 signer,
             )?;
-            
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            for team_account in remaining_accounts {
-                // Assert Provided Remaining Account is Treasury
-                require!(team_account.key().eq(&global_authority.team_treasury[i]), MarketplaceError::TeamTreasuryAddressMismatch);
-                invoke_signed(&system_instruction::transfer(ctx.accounts.escrow_vault.key, &global_authority.team_treasury[i], fee_amount * global_authority.treasury_rate[i] / PERMYRIAD),
-                    &[
-                        ctx.accounts.escrow_vault.to_account_info().clone(),
-                        team_account.clone(),
-                        ctx.accounts.system_program.to_account_info().clone(),
-                    ],
-                    signer,
-                )?;
-                i += 1;
-            }
-        } else {
-            let fee_amount: u64 = auction_data_info.highest_bid * global_authority.market_fee_token / PERMYRIAD;
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.escrow_token_account.to_account_info().clone(),
-                to: ctx.accounts.creator_token_account.to_account_info().clone(),
-                authority: ctx.accounts.escrow_vault.to_account_info()
-            };
-            token::transfer(
-                CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                auction_data_info.highest_bid - fee_amount,
-            )?;
-            
-            let mut i = 0;
-            // This is not expensive cuz the max count is 8
-            // remaining_accounts should be tokenAccount for token purchasing
-            for team_token_account in remaining_accounts {
-                // Get ATA of Treasury Account
-                let team_ata = spl_associated_token_account::get_associated_token_address(
-                    &global_authority.team_treasury[i], &REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap()
-                );
-                // Assert Provied Remaining Account is Treasury ATA
-                require!(team_token_account.key().eq(&team_ata), MarketplaceError::TeamTreasuryAddressMismatch);
-                // Assert Treasury ATA is Initialized
-                require!(team_token_account.owner == &token::ID, MarketplaceError::TeamTreasuryAddressMismatch);
-                let cpi_accounts = Transfer {
-                    from: ctx.accounts.escrow_token_account.to_account_info().clone(),
-                    to: team_token_account.clone(),
-                    authority: ctx.accounts.escrow_vault.to_account_info()
-                };
-                token::transfer(
-                    CpiContext::new_with_signer(token_program.clone().to_account_info(), cpi_accounts, signer),
-                    fee_amount * global_authority.treasury_rate[i] / PERMYRIAD,
-                )?;
-    
-                i += 1;
-            }
+            i += 1;
         }
         let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
         let signer = &[&seeds[..]];
@@ -1091,7 +856,7 @@ pub struct Initialize<'info> {
         init,
         seeds = [GLOBAL_AUTHORITY_SEED.as_ref()],
         bump,
-        space = 8 + 376,
+        space = 8 + 368,
         payer = admin
     )]
     pub global_authority: Account<'info, GlobalPool>,
@@ -1151,7 +916,7 @@ pub struct InitUserPool<'info> {
         init,
         seeds = [USER_DATA_SEED.as_ref(), owner.key().as_ref()],
         bump,
-        space = 8 + 64,
+        space = 8 + 48,
         payer = owner,
     )]
     pub user_pool: Account<'info, UserData>,
@@ -1178,21 +943,6 @@ pub struct Deposit<'info> {
     )]
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub escrow_vault: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        constraint = user_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = user_token_account.owner == *owner.key,
-    )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 #[derive(Accounts)]
@@ -1216,20 +966,6 @@ pub struct Withdraw<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub escrow_vault: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = user_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = user_token_account.owner == *owner.key,
-    )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1242,7 +978,7 @@ pub struct InitSellData<'info> {
         init,
         seeds = [SELL_DATA_SEED.as_ref(), nft.to_bytes().as_ref()],
         bump,
-        space = 8 + 128,
+        space = 8 + 120,
         payer = payer,
     )]
     pub sell_data_info: Account<'info, SellData>,
@@ -1395,19 +1131,6 @@ pub struct PurchaseNft<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub nft_mint: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = user_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = user_token_account.owner == *buyer.key,
-    )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = seller_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = seller_token_account.owner == *seller.key,
-    )]
-    pub seller_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -1421,7 +1144,7 @@ pub struct InitOfferData<'info> {
         init,
         seeds = [OFFER_DATA_SEED.as_ref(), nft.to_bytes().as_ref(), payer.key().to_bytes().as_ref()],
         bump,
-        space = 8 + 96,
+        space = 8 + 88,
         payer = payer,
     )]
     pub offer_data_info: Account<'info, OfferData>,
@@ -1467,20 +1190,6 @@ pub struct MakeOffer<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub escrow_vault: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = user_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = user_token_account.owner == *owner.key,
-    )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1572,19 +1281,6 @@ pub struct AcceptOffer<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub escrow_vault: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = user_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = user_token_account.owner == *seller.key,
-    )]
-    pub user_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -1598,7 +1294,7 @@ pub struct InitAuctionData<'info> {
         init,
         seeds = [AUCTION_DATA_SEED.as_ref(), nft.to_bytes().as_ref()],
         bump,
-        space = 8 + 152,
+        space = 8 + 144,
         payer = payer,
     )]
     pub auction_data_info: Account<'info, AuctionData>,
@@ -1670,32 +1366,11 @@ pub struct PlaceBid<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub escrow_vault: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = bidder_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = bidder_token_account.owner == *bidder.key,
-    )]
-    pub bidder_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
     
     #[account(mut)]
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub out_bidder: SystemAccount<'info>,
-
-    #[account(
-        mut,
-        constraint = out_bidder_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = out_bidder_token_account.owner == *out_bidder.key,
-    )]
-    pub out_bidder_token_account: Box<Account<'info, TokenAccount>>,
     
-    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -1747,13 +1422,6 @@ pub struct ClaimAuction<'info> {
     
     #[account(
         mut,
-        constraint = escrow_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = escrow_token_account.owner == *escrow_vault.key,
-    )]
-    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
-    
-    #[account(
-        mut,
         seeds = [USER_DATA_SEED.as_ref(), bidder.key().as_ref()],
         bump,
     )]
@@ -1762,13 +1430,6 @@ pub struct ClaimAuction<'info> {
     #[account(mut)]
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub creator: SystemAccount<'info>,
-
-    #[account(
-        mut,
-        constraint = creator_token_account.mint == REWARD_TOKEN_MINT_PUBKEY.parse::<Pubkey>().unwrap(),
-        constraint = creator_token_account.owner == *creator.key,
-    )]
-    pub creator_token_account: Box<Account<'info, TokenAccount>>,
     
     #[account(
         mut,

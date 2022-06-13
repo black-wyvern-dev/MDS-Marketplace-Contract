@@ -64,10 +64,6 @@ export type MdsMarketplace = {
         {
           "name": "solFee",
           "type": "u64"
-        },
-        {
-          "name": "tokenFee",
-          "type": "u64"
         }
       ]
     },
@@ -252,10 +248,6 @@ export type MdsMarketplace = {
         {
           "name": "priceSol",
           "type": "u64"
-        },
-        {
-          "name": "priceToken",
-          "type": "u64"
         }
       ]
     },
@@ -358,16 +350,6 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "sellerTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -394,10 +376,6 @@ export type MdsMarketplace = {
         {
           "name": "buyerBump",
           "type": "u8"
-        },
-        {
-          "name": "byToken",
-          "type": "u8"
         }
       ]
     },
@@ -420,21 +398,6 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -451,10 +414,6 @@ export type MdsMarketplace = {
         },
         {
           "name": "sol",
-          "type": "u64"
-        },
-        {
-          "name": "token",
           "type": "u64"
         }
       ]
@@ -478,21 +437,6 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -509,10 +453,6 @@ export type MdsMarketplace = {
         },
         {
           "name": "sol",
-          "type": "u64"
-        },
-        {
-          "name": "token",
           "type": "u64"
         }
       ]
@@ -586,21 +526,6 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -625,10 +550,6 @@ export type MdsMarketplace = {
         },
         {
           "name": "price",
-          "type": "u64"
-        },
-        {
-          "name": "byToken",
           "type": "u64"
         }
       ]
@@ -714,16 +635,6 @@ export type MdsMarketplace = {
         },
         {
           "name": "escrowVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -857,10 +768,6 @@ export type MdsMarketplace = {
           "type": "u64"
         },
         {
-          "name": "byToken",
-          "type": "u64"
-        },
-        {
           "name": "endDate",
           "type": "i64"
         }
@@ -890,28 +797,8 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "bidderTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "outBidder",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "outBidderTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -974,22 +861,12 @@ export type MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "bidderUserPool",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "creator",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1090,10 +967,6 @@ export type MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "marketFeeToken",
-            "type": "u64"
-          },
-          {
             "name": "teamCount",
             "type": "u64"
           },
@@ -1140,10 +1013,6 @@ export type MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "priceToken",
-            "type": "u64"
-          },
-          {
             "name": "listedDate",
             "type": "i64"
           },
@@ -1176,10 +1045,6 @@ export type MdsMarketplace = {
             "type": "i64"
           },
           {
-            "name": "byToken",
-            "type": "u64"
-          },
-          {
             "name": "active",
             "type": "u64"
           }
@@ -1205,10 +1070,6 @@ export type MdsMarketplace = {
           },
           {
             "name": "minIncreaseAmount",
-            "type": "u64"
-          },
-          {
-            "name": "byToken",
             "type": "u64"
           },
           {
@@ -1248,15 +1109,7 @@ export type MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "tradedTokenVolume",
-            "type": "u64"
-          },
-          {
             "name": "escrowSolBalance",
-            "type": "u64"
-          },
-          {
-            "name": "escrowTokenBalance",
             "type": "u64"
           }
         ]
@@ -1449,10 +1302,6 @@ export const IDL: MdsMarketplace = {
         {
           "name": "solFee",
           "type": "u64"
-        },
-        {
-          "name": "tokenFee",
-          "type": "u64"
         }
       ]
     },
@@ -1637,10 +1486,6 @@ export const IDL: MdsMarketplace = {
         {
           "name": "priceSol",
           "type": "u64"
-        },
-        {
-          "name": "priceToken",
-          "type": "u64"
         }
       ]
     },
@@ -1743,16 +1588,6 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "sellerTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -1779,10 +1614,6 @@ export const IDL: MdsMarketplace = {
         {
           "name": "buyerBump",
           "type": "u8"
-        },
-        {
-          "name": "byToken",
-          "type": "u8"
         }
       ]
     },
@@ -1805,21 +1636,6 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1836,10 +1652,6 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "sol",
-          "type": "u64"
-        },
-        {
-          "name": "token",
           "type": "u64"
         }
       ]
@@ -1863,21 +1675,6 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1894,10 +1691,6 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "sol",
-          "type": "u64"
-        },
-        {
-          "name": "token",
           "type": "u64"
         }
       ]
@@ -1971,21 +1764,6 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -2010,10 +1788,6 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "price",
-          "type": "u64"
-        },
-        {
-          "name": "byToken",
           "type": "u64"
         }
       ]
@@ -2099,16 +1873,6 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "escrowVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "userTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2242,10 +2006,6 @@ export const IDL: MdsMarketplace = {
           "type": "u64"
         },
         {
-          "name": "byToken",
-          "type": "u64"
-        },
-        {
           "name": "endDate",
           "type": "i64"
         }
@@ -2275,28 +2035,8 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "bidderTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "outBidder",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "outBidderTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -2359,22 +2099,12 @@ export const IDL: MdsMarketplace = {
           "isSigner": false
         },
         {
-          "name": "escrowTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "bidderUserPool",
           "isMut": true,
           "isSigner": false
         },
         {
           "name": "creator",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "creatorTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -2475,10 +2205,6 @@ export const IDL: MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "marketFeeToken",
-            "type": "u64"
-          },
-          {
             "name": "teamCount",
             "type": "u64"
           },
@@ -2525,10 +2251,6 @@ export const IDL: MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "priceToken",
-            "type": "u64"
-          },
-          {
             "name": "listedDate",
             "type": "i64"
           },
@@ -2561,10 +2283,6 @@ export const IDL: MdsMarketplace = {
             "type": "i64"
           },
           {
-            "name": "byToken",
-            "type": "u64"
-          },
-          {
             "name": "active",
             "type": "u64"
           }
@@ -2590,10 +2308,6 @@ export const IDL: MdsMarketplace = {
           },
           {
             "name": "minIncreaseAmount",
-            "type": "u64"
-          },
-          {
-            "name": "byToken",
             "type": "u64"
           },
           {
@@ -2633,15 +2347,7 @@ export const IDL: MdsMarketplace = {
             "type": "u64"
           },
           {
-            "name": "tradedTokenVolume",
-            "type": "u64"
-          },
-          {
             "name": "escrowSolBalance",
-            "type": "u64"
-          },
-          {
-            "name": "escrowTokenBalance",
             "type": "u64"
           }
         ]
