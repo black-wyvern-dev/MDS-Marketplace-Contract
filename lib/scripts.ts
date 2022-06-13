@@ -214,7 +214,7 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
             buf = data.slice(144, 152).reverse();
             let status = (new anchor.BN(buf));
 
-            // if (status.toNumber() !== 0)
+            if (status.toNumber() === 1)
                 result.push({
                     mint,
                     creator,
