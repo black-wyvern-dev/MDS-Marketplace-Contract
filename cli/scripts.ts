@@ -406,9 +406,10 @@ export const createAuction = async (
     mint: PublicKey,
     startPrice: number,
     minIncrease: number,
-    endDate: number,
+    duration: number,
+    reserved: boolean,
 ) => {
-    console.log(mint.toBase58(), startPrice, minIncrease, endDate);
+    console.log(mint.toBase58(), startPrice, minIncrease, duration, reserved);
 
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
@@ -431,7 +432,8 @@ export const createAuction = async (
         payer.publicKey,
         startPrice,
         minIncrease,
-        endDate,
+        duration,
+        reserved,
         program,
         solConnection,
     );
@@ -544,10 +546,11 @@ export const getAuctionDataInfo = async (
       creator: auctionData.creator.toBase58(),
       startPrice: auctionData.startPrice.toNumber(),
       minIncreaseAmount: auctionData.minIncreaseAmount.toNumber(),
-      endDate: auctionData.endDate.toNumber(),
+      startDate: auctionData.startDate.toNumber(),
       lastBidder: auctionData.lastBidder.toBase58(),
       lastBidDate: auctionData.lastBidDate.toNumber(),
       highestBid: auctionData.highestBid.toNumber(),
+      duration: auctionData.duration.toNumber(),
       status: auctionData.status.toNumber(),
     };
 }

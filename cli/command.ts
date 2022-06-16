@@ -310,7 +310,8 @@ programCommand('create_auction')
   .option('-a, --address <string>', 'nft mint pubkey')
   .option('-p, --start_price <number>', 'start price')
   .option('-m, --min_increase <number>', 'min increase amount')
-  .option('-d, --end_date <number>', 'end date timestamp')
+  .option('-d, --duration <number>', 'duration by second')
+  .option('-r, --reserve <number>', 'reserved auction flag')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   .action(async (directory, cmd) => {
     const {
@@ -318,7 +319,8 @@ programCommand('create_auction')
       address,
       start_price,
       min_increase,
-      end_date,
+      duration,
+      reserve,
     } = cmd.opts();
 
     console.log('Solana config: ', env);
@@ -336,8 +338,12 @@ programCommand('create_auction')
       console.log("Error Auction Min Increase Amount input");
       return;
     }
-    if (end_date === undefined || isNaN(parseInt(end_date))) {
-      console.log("Error Auction End Date input");
+    if (duration === undefined || isNaN(parseInt(duration))) {
+      console.log("Error Auction Duration input");
+      return;
+    }
+    if (reserve === undefined || isNaN(parseInt(reserve)) || parseInt(reserve) > 1) {
+      console.log("Error Reserve Flag input");
       return;
     }
     
@@ -345,7 +351,8 @@ programCommand('create_auction')
       new PublicKey(address),
       parseFloat(start_price) * LAMPORTS_PER_SOL,
       parseFloat(min_increase) * LAMPORTS_PER_SOL,
-      parseInt(end_date),
+      parseInt(duration),
+      parseInt(reserve) == 1,
     );
 });
 

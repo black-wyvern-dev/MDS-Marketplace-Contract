@@ -205,13 +205,15 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
             buf = data.slice(80, 88).reverse();
             let minIncreaseAmount = (new anchor.BN(buf));
             buf = data.slice(88, 96).reverse();
-            let endDate = (new anchor.BN(buf));
+            let startDate = (new anchor.BN(buf));
             buf = data.slice(96, 104).reverse();
             let lastBidDate = (new anchor.BN(buf));
             let lastBidder = new PublicKey(data.slice(104, 136));
             buf = data.slice(136, 144).reverse();
             let highestBid = (new anchor.BN(buf));
             buf = data.slice(144, 152).reverse();
+            let duration = (new anchor.BN(buf));
+            buf = data.slice(152, 160).reverse();
             let status = (new anchor.BN(buf));
 
             if (status.toNumber() === 1)
@@ -220,10 +222,11 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
                     creator,
                     startPrice,
                     minIncreaseAmount,
-                    endDate,
+                    startDate,
                     lastBidDate,
                     lastBidder,
                     highestBid,
+                    duration,
                     status,
                 });
         }
@@ -240,10 +243,11 @@ export const getAllStartedAuctions = async (connection: Connection, rpcUrl: stri
                 creator: info.creator.toBase58(),
                 startPrice: info.startPrice.toNumber(),
                 minIncreaseAmount: info.minIncreaseAmount.toNumber(),
-                endDate: info.endDate.toNumber(),
+                startDate: info.startDate.toNumber(),
                 lastBidDate: info.lastBidDate.toNumber(),
                 lastBidder: info.lastBidder.toBase58(),
                 highestBid: info.highestBid.toNumber(),
+                duration: info.duration.toNumber(),
                 status: info.status.toNumber(),
             }
         })
@@ -1023,11 +1027,12 @@ export const createCreateAuctionTx = async (
     userAddress: PublicKey,
     startPrice: number,
     minIncrease: number,
-    endDate: number,
+    duration: number,
+    reserved: boolean,
     program: anchor.Program,
     connection: Connection,
 ) => {
-    if (startPrice < 0 || minIncrease < 0 || endDate < 0) {
+    if (startPrice < 0 || minIncrease < 0 || duration < 0) {
         throw 'Invalid Price Value';
     }
 
@@ -1067,12 +1072,12 @@ export const createCreateAuctionTx = async (
 
     if (instructions.length > 0) instructions.map((ix) => tx.add(ix));
     console.log('==>creating Auction',
-        mint.toBase58(), startPrice, minIncrease, endDate);
+        mint.toBase58(), startPrice, minIncrease, duration, reserved);
 
     tx.add(program.instruction.createAuction(
         bump, nft_bump, new anchor.BN(startPrice),
         new anchor.BN(minIncrease),
-        new anchor.BN(endDate), {
+        new anchor.BN(duration), new anchor.BN(reserved ? 1 : 0), {
         accounts: {
             owner: userAddress,
             globalAuthority,

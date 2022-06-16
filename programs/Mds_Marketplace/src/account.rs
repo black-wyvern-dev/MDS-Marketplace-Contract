@@ -37,15 +37,17 @@ pub struct OfferData {
 #[account]
 #[derive(Default)]
 pub struct AuctionData {
-    // 8 + 144
+    // 8 + 152
     pub mint: Pubkey,               // 32
     pub creator: Pubkey,            // 32
     pub start_price: u64,           // 8
     pub min_increase_amount: u64,   // 8
-    pub end_date: i64,              // 8
+    pub start_date: i64,            // 8
     pub last_bid_date: i64,         // 8
     pub last_bidder: Pubkey,        // 32
     pub highest_bid: u64,           // 8
+    pub duration: i64,              // 8
+    // 0-canceled, 1-started, 2-claimed, 3-reserved
     pub status: u64,                // 8
 }
 
@@ -56,4 +58,10 @@ pub struct UserData {
     pub address: Pubkey,            // 32
     pub traded_volume: u64,         // 8
     pub escrow_sol_balance: u64,    // 8
+}
+
+impl AuctionData {
+    pub fn get_end_date(&self) -> i64 {
+        self.start_date + self.duration
+    }
 }

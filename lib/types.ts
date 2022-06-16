@@ -8,7 +8,7 @@ export const OFFER_DATA_SEED = "offer-info-v1";
 export const OFFER_DATA_SIZE = 96;
 export const USER_DATA_SEED = "user-info-v1";
 export const AUCTION_DATA_SEED = "auction-info-v1";
-export const AUCTION_DATA_SIZE = 152;
+export const AUCTION_DATA_SIZE = 160;
 export const ESCROW_VAULT_SEED = "escrow-vault";
 
 export const MARKETPLACE_PROGRAM_ID = new PublicKey("C29hER4SXQr3atHsuCrRmLAkXBpxvfLMCNeXg2TRTd9o");
@@ -42,15 +42,16 @@ export interface OfferData {
 }
 
 export interface AuctionData {
-    // 8 + 144
+    // 8 + 152
     mint: PublicKey,                // 32
     creator: PublicKey,             // 32
     startPrice: anchor.BN,          // 8
     minIncreaseAmount: anchor.BN,   // 8
-    endDate: anchor.BN,             // 8
+    startDate: anchor.BN,           // 8
     lastBidDate: anchor.BN,         // 8
     lastBidder: PublicKey,          // 32
     highestBid: anchor.BN,          // 8
+    duration: anchor.BN,            // 8
     status: anchor.BN,              // 8
 }
 
