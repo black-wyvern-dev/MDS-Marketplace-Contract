@@ -1,6 +1,7 @@
 import { Program, web3 } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
-import { Keypair, 
+import {
+    Keypair,
     PublicKey,
 } from '@solana/web3.js';
 import fs from 'fs';
@@ -8,7 +9,7 @@ import path from 'path';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 import { AuctionData, AUCTION_DATA_SEED, GlobalPool, GLOBAL_AUTHORITY_SEED, MARKETPLACE_PROGRAM_ID, OfferData, OFFER_DATA_SEED, SellData, SELL_DATA_SEED, UserData } from '../lib/types';
-import {IDL as MarketplaceIDL} from "../target/types/mds_marketplace";
+import { IDL as MarketplaceIDL } from "../target/types/mds_marketplace";
 import {
     createAcceptOfferTx,
     createAddTreasuryTx,
@@ -28,6 +29,8 @@ import {
     createPlaceBidTx,
     createPurchaseTx,
     createRemoveTreasuryTx,
+    createTransferFromVaultTx,
+    createTransferTx,
     createUpdateFeeTx,
     createWithdrawTx,
     getAllListedNFTs,
@@ -54,7 +57,7 @@ export const setClusterConfig = async (cluster: web3.Cluster) => {
     const wallet = new NodeWallet(walletKeypair);
     // anchor.setProvider(anchor.AnchorProvider.local(web3.clusterApiUrl(cluster)));
     // Configure the client to use the local cluster.
-    anchor.setProvider(new anchor.AnchorProvider(solConnection, wallet, {skipPreflight: true, commitment: 'confirmed'}));
+    anchor.setProvider(new anchor.AnchorProvider(solConnection, wallet, { skipPreflight: true, commitment: 'confirmed' }));
     payer = wallet;
 
     // Generate the program client from IDL.
@@ -101,13 +104,13 @@ const main = async () => {
     //     })
     // });
     // calculateRewards(new PublicKey('GyjFWXkMn4AGrD5FPfBegP75zmodBeBxr9gBRJjr8qke'));
-    
+
 };
 
 export const initProject = async (
 ) => {
     const tx = await createInitializeTx(payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -120,7 +123,7 @@ export const initSellData = async (
     mint: PublicKey,
 ) => {
     const tx = await createInitSellDataTx(mint, payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    const { blockhash } = await solConnection.getRecentBlockhash('finalized');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -131,7 +134,7 @@ export const initSellData = async (
 
 export const initUserPool = async () => {
     const tx = await createInitUserTx(payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    const { blockhash } = await solConnection.getRecentBlockhash('finalized');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -144,7 +147,7 @@ export const initAuctionData = async (
     mint: PublicKey,
 ) => {
     const tx = await createInitAuctionDataTx(mint, payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    const { blockhash } = await solConnection.getRecentBlockhash('finalized');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -158,7 +161,7 @@ export const updateFee = async (
 ) => {
     console.log(solFee);
     const tx = await createUpdateFeeTx(payer.publicKey, program, solFee);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -174,7 +177,7 @@ export const addTreasury = async (
     console.log(treasury.toBase58(), rate);
 
     const tx = await createAddTreasuryTx(payer.publicKey, treasury, rate, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -189,7 +192,7 @@ export const removeTreasury = async (
     console.log(treasury.toBase58());
 
     const tx = await createRemoveTreasuryTx(payer.publicKey, program, treasury);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -210,7 +213,7 @@ export const depositEscrow = async (
     }
 
     const tx = await createDepositTx(userAddress, sol, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -231,7 +234,37 @@ export const withdrawEscrow = async (
     }
 
     const tx = await createWithdrawTx(userAddress, sol, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const transfer = async (
+    mint: PublicKey,
+    recipient: PublicKey,
+) => {
+    console.log(mint.toBase58(), recipient.toBase58());
+    const tx = await createTransferTx(mint, payer.publicKey, recipient, program, solConnection);
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const transferFromVault = async (
+    mint: PublicKey,
+    recipient: PublicKey,
+) => {
+    console.log(mint.toBase58(), recipient.toBase58());
+    const tx = await createTransferFromVaultTx(mint, payer.publicKey, recipient, program, solConnection);
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -263,7 +296,7 @@ export const listNftForSale = async (
     }
 
     const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, priceSol);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -283,7 +316,7 @@ export const delistNft = async (
     }
 
     const tx = await createDelistNftTx(mint, payer.publicKey, program, solConnection);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -296,7 +329,7 @@ export const purchase = async (
     mint: PublicKey,
 ) => {
     console.log(mint.toBase58());
-    
+
     if (!await isInitializedUser(payer.publicKey, solConnection)) {
         console.log('User PDA is not Initialized. Should Init User PDA for first usage');
         return;
@@ -305,7 +338,7 @@ export const purchase = async (
     const globalPool: GlobalPool = await getGlobalState(program);
 
     const tx = await createPurchaseTx(mint, payer.publicKey, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -318,7 +351,7 @@ export const initOfferData = async (
     mint: PublicKey,
 ) => {
     const tx = await createInitOfferDataTx(mint, payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('finalized');
+    const { blockhash } = await solConnection.getRecentBlockhash('finalized');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -350,7 +383,7 @@ export const makeOffer = async (
     }
 
     const tx = await createMakeOfferTx(mint, payer.publicKey, price, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -370,7 +403,7 @@ export const cancelOffer = async (
     }
 
     const tx = await createCancelOfferTx(mint, payer.publicKey, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -393,7 +426,7 @@ export const acceptOffer = async (
     const globalPool: GlobalPool = await getGlobalState(program);
 
     const tx = await createAcceptOfferTx(mint, buyer, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -437,7 +470,7 @@ export const createAuction = async (
         program,
         solConnection,
     );
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -458,7 +491,7 @@ export const placeBid = async (
     }
 
     const tx = await createPlaceBidTx(mint, payer.publicKey, price, program);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -480,7 +513,7 @@ export const claimAuction = async (
     const globalPool: GlobalPool = await getGlobalState(program);
 
     const tx = await createClaimAuctionTx(mint, payer.publicKey, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -500,7 +533,7 @@ export const cancelAuction = async (
     }
 
     const tx = await createCancelAuctionTx(mint, payer.publicKey, program, solConnection);
-    const {blockhash} = await solConnection.getRecentBlockhash('confirmed');
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
     payer.signTransaction(tx);
@@ -514,12 +547,12 @@ export const getNFTPoolInfo = async (
 ) => {
     const nftData: SellData = await getNFTPoolState(mint, program);
     return {
-      mint: nftData.mint.toBase58(),
-      seller: nftData.seller.toBase58(),
-      collection: nftData.collection.toBase58(),
-      priceSol: nftData.priceSol.toNumber(),
-      listedDate: nftData.listedDate.toNumber(),
-      active: nftData.active.toNumber(),
+        mint: nftData.mint.toBase58(),
+        seller: nftData.seller.toBase58(),
+        collection: nftData.collection.toBase58(),
+        priceSol: nftData.priceSol.toNumber(),
+        listedDate: nftData.listedDate.toNumber(),
+        active: nftData.active.toNumber(),
     };
 }
 
@@ -529,11 +562,11 @@ export const getOfferDataInfo = async (
 ) => {
     const offerData: OfferData = await getOfferDataState(mint, userAddress, program);
     return {
-      mint: offerData.mint.toBase58(),
-      buyer: offerData.buyer.toBase58(),
-      offerPrice: offerData.offerPrice.toNumber(),
-      offerListingDate: offerData.offerListingDate.toNumber(),
-      active: offerData.active.toNumber(),
+        mint: offerData.mint.toBase58(),
+        buyer: offerData.buyer.toBase58(),
+        offerPrice: offerData.offerPrice.toNumber(),
+        offerListingDate: offerData.offerListingDate.toNumber(),
+        active: offerData.active.toNumber(),
     };
 }
 
@@ -542,16 +575,16 @@ export const getAuctionDataInfo = async (
 ) => {
     const auctionData: AuctionData = await getAuctionDataState(mint, program);
     return {
-      mint: auctionData.mint.toBase58(),
-      creator: auctionData.creator.toBase58(),
-      startPrice: auctionData.startPrice.toNumber(),
-      minIncreaseAmount: auctionData.minIncreaseAmount.toNumber(),
-      startDate: auctionData.startDate.toNumber(),
-      lastBidder: auctionData.lastBidder.toBase58(),
-      lastBidDate: auctionData.lastBidDate.toNumber(),
-      highestBid: auctionData.highestBid.toNumber(),
-      duration: auctionData.duration.toNumber(),
-      status: auctionData.status.toNumber(),
+        mint: auctionData.mint.toBase58(),
+        creator: auctionData.creator.toBase58(),
+        startPrice: auctionData.startPrice.toNumber(),
+        minIncreaseAmount: auctionData.minIncreaseAmount.toNumber(),
+        startDate: auctionData.startDate.toNumber(),
+        lastBidder: auctionData.lastBidder.toBase58(),
+        lastBidDate: auctionData.lastBidDate.toNumber(),
+        highestBid: auctionData.highestBid.toNumber(),
+        duration: auctionData.duration.toNumber(),
+        status: auctionData.status.toNumber(),
     };
 }
 
@@ -560,20 +593,20 @@ export const getUserPoolInfo = async (
 ) => {
     const userData: UserData = await getUserPoolState(userAddress, program);
     return {
-      address: userData.address.toBase58(),
-      escrowSol: userData.escrowSolBalance.toNumber(),
-      tradedVolume: userData.tradedVolume.toNumber(),
+        address: userData.address.toBase58(),
+        escrowSol: userData.escrowSolBalance.toNumber(),
+        tradedVolume: userData.tradedVolume.toNumber(),
     };
 }
 
 export const getGlobalInfo = async () => {
     const globalPool: GlobalPool = await getGlobalState(program);
     const result = {
-      admin: globalPool.superAdmin.toBase58(),
-      marketFeeSol: globalPool.marketFeeSol.toNumber(),
-      teamCount: globalPool.teamCount.toNumber(),
-      teamTreasury: globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toBase58()),
-      treasuryRate: globalPool.treasuryRate.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toNumber()),
+        admin: globalPool.superAdmin.toBase58(),
+        marketFeeSol: globalPool.marketFeeSol.toNumber(),
+        teamCount: globalPool.teamCount.toNumber(),
+        teamTreasury: globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toBase58()),
+        treasuryRate: globalPool.treasuryRate.slice(0, globalPool.teamCount.toNumber()).map((info) => info.toNumber()),
     };
 
     return result;

@@ -32,6 +32,8 @@ import {
   addTreasury,
   removeTreasury,
   initUserPool,
+  transfer,
+  transferFromVault,
 } from "./scripts";
 
 dotenv.config({ path: __dirname+'/../.env' });
@@ -165,6 +167,60 @@ programCommand('withdraw')
     }
     
     await withdrawEscrow(parseFloat(sol) * LAMPORTS_PER_SOL);
+});
+
+programCommand('transfer')
+  .option('-a, --address <string>', 'nft mint pubkey')
+  .option('-r, --recipient <string>', 'recipient user address')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .action(async (directory, cmd) => {
+    const {
+      env,
+      address,
+      recipient,
+    } = cmd.opts();
+
+    console.log('Solana config: ', env);
+    await setClusterConfig(env);
+
+    if (address === undefined) {
+      console.log("Error Mint input");
+      return;
+    }
+    
+    if (recipient === undefined) {
+      console.log("Error Recipint Address input");
+      return;
+    }
+    
+    await transfer(new PublicKey(address), new PublicKey(recipient));
+});
+
+programCommand('transfer_from_vault')
+  .option('-a, --address <string>', 'nft mint pubkey')
+  .option('-r, --recipient <string>', 'recipient user address')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .action(async (directory, cmd) => {
+    const {
+      env,
+      address,
+      recipient,
+    } = cmd.opts();
+
+    console.log('Solana config: ', env);
+    await setClusterConfig(env);
+
+    if (address === undefined) {
+      console.log("Error Mint input");
+      return;
+    }
+    
+    if (recipient === undefined) {
+      console.log("Error Recipint Address input");
+      return;
+    }
+    
+    await transferFromVault(new PublicKey(address), new PublicKey(recipient));
 });
 
 programCommand('list')

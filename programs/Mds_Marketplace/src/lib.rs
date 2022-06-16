@@ -260,6 +260,87 @@ pub mod mds_marketplace {
         Ok(())
     }
 
+    pub fn transfer(ctx: Context<TransferNft>) -> Result<()> {
+        let token_account_info = &mut &ctx.accounts.user_token_account;
+        let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
+        let token_program = &mut &ctx.accounts.token_program;
+
+        let cpi_accounts = Transfer {
+            from: token_account_info.to_account_info().clone(),
+            to: dest_token_account_info.to_account_info().clone(),
+            authority: ctx.accounts.owner.to_account_info(),
+        };
+        token::transfer(
+            CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
+            1,
+        )?;
+
+        Ok(())
+    }
+
+    pub fn transfer_from_vault(
+        ctx: Context<TransferFromVault>,
+        global_bump: u8,
+        _sell_bump: u8,
+    ) -> Result<()> {
+        let sell_data_info = &mut ctx.accounts.sell_data_info;
+        msg!("Mint: {:?}", sell_data_info.mint);
+
+        // Assert NFT Pubkey with Sell Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        // Assert NFT seller is payer
+        require!(
+            ctx.accounts.owner.key().eq(&sell_data_info.seller),
+            MarketplaceError::SellerMismatch
+        );
+        // Assert Already Delisted NFT
+        require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
+
+        sell_data_info.active = 0;
+
+        let token_account_info = &mut &ctx.accounts.user_token_account;
+        let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
+        let token_program = &mut &ctx.accounts.token_program;
+        let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
+        let signer = &[&seeds[..]];
+
+        let cpi_accounts = Transfer {
+            from: dest_token_account_info.to_account_info().clone(),
+            to: token_account_info.to_account_info().clone(),
+            authority: ctx.accounts.global_authority.to_account_info(),
+        };
+        token::transfer(
+            CpiContext::new_with_signer(
+                token_program.clone().to_account_info(),
+                cpi_accounts,
+                signer,
+            ),
+            1,
+        )?;
+
+        invoke_signed(
+            &spl_token::instruction::close_account(
+                token_program.key,
+                &dest_token_account_info.key(),
+                ctx.accounts.owner.key,
+                &ctx.accounts.global_authority.key(),
+                &[],
+            )?,
+            &[
+                token_program.clone().to_account_info(),
+                dest_token_account_info.to_account_info().clone(),
+                ctx.accounts.owner.to_account_info().clone(),
+                ctx.accounts.global_authority.to_account_info().clone(),
+            ],
+            signer,
+        )?;
+
+        Ok(())
+    }
+
     pub fn purchase<'info>(
         ctx: Context<'_, '_, '_, 'info, PurchaseNft<'info>>,
         global_bump: u8,
@@ -1243,6 +1324,78 @@ pub struct Withdraw<'info> {
     pub escrow_vault: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction()]
+pub struct TransferNft<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        constraint = user_token_account.mint == nft_mint.key(),
+        constraint = user_token_account.owner == *owner.key,
+        constraint = user_token_account.amount == 1,
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub recipient: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        constraint = dest_nft_token_account.mint == nft_mint.key(),
+        constraint = dest_nft_token_account.owner == recipient.key(),
+    )]
+    pub dest_nft_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub nft_mint: AccountInfo<'info>,
+
+    pub token_program: Program<'info, Token>,
+}
+#[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct TransferFromVault<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [GLOBAL_AUTHORITY_SEED.as_ref()],
+        bump,
+    )]
+    pub global_authority: Box<Account<'info, GlobalPool>>,
+
+    #[account(
+        mut,
+        seeds = [SELL_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub sell_data_info: Account<'info, SellData>,
+
+    #[account(mut)]
+    pub recipient: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        constraint = user_token_account.mint == nft_mint.key(),
+        constraint = user_token_account.owner == *recipient.key,
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        constraint = dest_nft_token_account.mint == nft_mint.key(),
+        constraint = dest_nft_token_account.owner == global_authority.key(),
+        constraint = dest_nft_token_account.amount == 1,
+    )]
+    pub dest_nft_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub nft_mint: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]

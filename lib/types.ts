@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import {PublicKey} from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
 export const GLOBAL_AUTHORITY_SEED = "global-authority-v1";
 export const SELL_DATA_SEED = "sell-info-v1";
