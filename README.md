@@ -69,6 +69,11 @@ This command should be executed for the first time usage of each traders.
 Get user PDA info for traders. This will show user escrow balance and traded volume info.
 - `address` is the trader wallet address
 
+### transfer
+Transfer NFT from Sender wallet or it's listed Escrow Account to the Recipient.
+- `address` is the NFT mint address
+- `recipient` is the recipient wallet address
+
 ### list
 List NFT for sale as Seller.
 - `address` is the NFT mint address
@@ -101,7 +106,8 @@ Create Auction for a particular NFT for funny trading as Seller.
 - `address` is the NFT mint address
 - `start_price` is the bidding start price
 - `min_increase` is the minimum increasing amount for the higer bidding
-- `end_date` is the auction end time as timestamp by second
+- `duration` is the auction period since started time by second
+- `reserve` if this is 1, then the auction is reserve to start from the first bid placed date. Default 0
 
 ### palce_bid
 Participate in auction with higher bidding as Buyer.
