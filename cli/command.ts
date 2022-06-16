@@ -1,9 +1,9 @@
 #!/usr/bin/env ts-node
 import * as dotenv from "dotenv";
 import { program } from 'commander';
-import { 
-    PublicKey,
-    LAMPORTS_PER_SOL,
+import {
+  PublicKey,
+  LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
 import {
   initProject,
@@ -33,10 +33,9 @@ import {
   removeTreasury,
   initUserPool,
   transfer,
-  transferFromVault,
 } from "./scripts";
 
-dotenv.config({ path: __dirname+'/../.env' });
+dotenv.config({ path: __dirname + '/../.env' });
 
 program.version('0.0.1');
 
@@ -49,7 +48,7 @@ programCommand('status')
     console.log('Solana config: ', env);
     await setClusterConfig(env);
     console.log(await getGlobalInfo());
-});
+  });
 
 programCommand('user_status')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -66,7 +65,7 @@ programCommand('user_status')
       return;
     }
     console.log(await getUserPoolInfo(new PublicKey(address)));
-});
+  });
 
 programCommand('update_fee')
   .option('-s, --sol_fee <number>', 'marketplace trading by sol fee as permyraid')
@@ -84,9 +83,9 @@ programCommand('update_fee')
       console.log("Error Sol Fee Input");
       return;
     }
-    
+
     await updateFee(parseInt(sol_fee));
-});
+  });
 
 programCommand('add_treasury')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -109,7 +108,7 @@ programCommand('add_treasury')
       return;
     }
     await addTreasury(new PublicKey(address), parseInt(rate));
-});
+  });
 
 programCommand('remove_treasury')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -126,7 +125,7 @@ programCommand('remove_treasury')
       return;
     }
     await removeTreasury(new PublicKey(address));
-});
+  });
 
 programCommand('deposit')
   .option('-s, --sol <number>', 'deposit sol amount')
@@ -144,9 +143,9 @@ programCommand('deposit')
       console.log("Error Sol Amount input");
       return;
     }
-    
+
     await depositEscrow(parseFloat(sol) * LAMPORTS_PER_SOL);
-});
+  });
 
 programCommand('withdraw')
   .option('-s, --sol <number>', 'withdraw sol amount')
@@ -165,9 +164,9 @@ programCommand('withdraw')
       console.log("Error Sol Amount input");
       return;
     }
-    
+
     await withdrawEscrow(parseFloat(sol) * LAMPORTS_PER_SOL);
-});
+  });
 
 programCommand('transfer')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -187,41 +186,14 @@ programCommand('transfer')
       console.log("Error Mint input");
       return;
     }
-    
+
     if (recipient === undefined) {
       console.log("Error Recipint Address input");
       return;
     }
-    
+
     await transfer(new PublicKey(address), new PublicKey(recipient));
-});
-
-programCommand('transfer_from_vault')
-  .option('-a, --address <string>', 'nft mint pubkey')
-  .option('-r, --recipient <string>', 'recipient user address')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  .action(async (directory, cmd) => {
-    const {
-      env,
-      address,
-      recipient,
-    } = cmd.opts();
-
-    console.log('Solana config: ', env);
-    await setClusterConfig(env);
-
-    if (address === undefined) {
-      console.log("Error Mint input");
-      return;
-    }
-    
-    if (recipient === undefined) {
-      console.log("Error Recipint Address input");
-      return;
-    }
-    
-    await transferFromVault(new PublicKey(address), new PublicKey(recipient));
-});
+  });
 
 programCommand('list')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -245,9 +217,9 @@ programCommand('list')
       console.log("Error Sol Price input");
       return;
     }
-    
+
     await listNftForSale(new PublicKey(address), parseFloat(price_sol) * LAMPORTS_PER_SOL);
-});
+  });
 
 programCommand('delist')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -265,9 +237,9 @@ programCommand('delist')
       console.log("Error Mint input");
       return;
     }
-    
+
     await delistNft(new PublicKey(address));
-});
+  });
 
 programCommand('purchase')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -285,9 +257,9 @@ programCommand('purchase')
       console.log("Error Mint input");
       return;
     }
-    
+
     await purchase(new PublicKey(address));
-});
+  });
 
 programCommand('make_offer')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -311,9 +283,9 @@ programCommand('make_offer')
       console.log("Error Offer Price input");
       return;
     }
-    
+
     await makeOffer(new PublicKey(address), parseFloat(price) * LAMPORTS_PER_SOL);
-});
+  });
 
 programCommand('cancel_offer')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -331,9 +303,9 @@ programCommand('cancel_offer')
       console.log("Error Mint input");
       return;
     }
-    
+
     await cancelOffer(new PublicKey(address));
-});
+  });
 
 programCommand('accept_offer')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -353,14 +325,14 @@ programCommand('accept_offer')
       console.log("Error Mint input");
       return;
     }
-    
+
     if (buyer === undefined) {
       console.log("Error Buyer input");
       return;
     }
-    
+
     await acceptOffer(new PublicKey(address), new PublicKey(buyer));
-});
+  });
 
 programCommand('create_auction')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -402,7 +374,7 @@ programCommand('create_auction')
       console.log("Error Reserve Flag input");
       return;
     }
-    
+
     await createAuction(
       new PublicKey(address),
       parseFloat(start_price) * LAMPORTS_PER_SOL,
@@ -410,7 +382,7 @@ programCommand('create_auction')
       parseInt(duration),
       parseInt(reserve) == 1,
     );
-});
+  });
 
 programCommand('place_bid')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -434,9 +406,9 @@ programCommand('place_bid')
       console.log("Error Auction Price input");
       return;
     }
-    
+
     await placeBid(new PublicKey(address), parseFloat(price) * 1e9);
-});
+  });
 
 
 programCommand('claim_auction')
@@ -455,9 +427,9 @@ programCommand('claim_auction')
       console.log("Error Mint input");
       return;
     }
-    
+
     await claimAuction(new PublicKey(address));
-});
+  });
 
 programCommand('cancel_auction')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -475,9 +447,9 @@ programCommand('cancel_auction')
       console.log("Error Mint input");
       return;
     }
-    
+
     await cancelAuction(new PublicKey(address));
-});
+  });
 
 programCommand('listed_nft_data')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -496,7 +468,7 @@ programCommand('listed_nft_data')
       return;
     }
     console.log(await getNFTPoolInfo(new PublicKey(address)));
-});
+  });
 
 programCommand('get_offer_data')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -521,7 +493,7 @@ programCommand('get_offer_data')
       return;
     }
     console.log(await getOfferDataInfo(new PublicKey(address), new PublicKey(buyer)));
-});
+  });
 
 programCommand('get_auction_data')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -540,7 +512,7 @@ programCommand('get_auction_data')
       return;
     }
     console.log(await getAuctionDataInfo(new PublicKey(address)));
-});
+  });
 
 programCommand('get_all_listed_nfts')
   .option('-r, --rpc <string>', 'custom rpc url')
@@ -555,7 +527,7 @@ programCommand('get_all_listed_nfts')
     await setClusterConfig(env);
 
     console.log(await getAllNFTs(rpc));
-});
+  });
 
 programCommand('get_all_offers_for_nft')
   .option('-a, --address <string>', 'nft mint pubkey')
@@ -576,7 +548,7 @@ programCommand('get_all_offers_for_nft')
       return;
     }
     console.log(await getAllOffersForNFT(address, rpc));
-});
+  });
 
 programCommand('get_all_auctions')
   .option('-r, --rpc <string>', 'custom rpc url')
@@ -591,7 +563,7 @@ programCommand('get_all_auctions')
     await setClusterConfig(env);
 
     console.log(await getAllAuctions(rpc));
-});
+  });
 
 programCommand('init')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -603,7 +575,7 @@ programCommand('init')
     await setClusterConfig(env);
 
     await initProject();
-});
+  });
 
 programCommand('init_user')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -614,7 +586,7 @@ programCommand('init_user')
     console.log('Solana config: ', env);
     await setClusterConfig(env);
     await initUserPool();
-});
+  });
 
 function programCommand(name: string) {
   return program

@@ -248,22 +248,26 @@ export const transfer = async (
     recipient: PublicKey,
 ) => {
     console.log(mint.toBase58(), recipient.toBase58());
-    const tx = await createTransferTx(mint, payer.publicKey, recipient, program, solConnection);
-    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
-    tx.feePayer = payer.publicKey;
-    tx.recentBlockhash = blockhash;
-    payer.signTransaction(tx);
-    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
-    await solConnection.confirmTransaction(txId, "confirmed");
-    console.log("Your transaction signature", txId);
-}
 
-export const transferFromVault = async (
-    mint: PublicKey,
-    recipient: PublicKey,
-) => {
-    console.log(mint.toBase58(), recipient.toBase58());
-    const tx = await createTransferFromVaultTx(mint, payer.publicKey, recipient, program, solConnection);
+    const [sellData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('Sell Data PDA: ', sellData.toBase58());
+
+    let fromVault = 1;
+    let poolAccount = await solConnection.getAccountInfo(sellData);
+    if (poolAccount === null || poolAccount.data === null) {
+        fromVault = 0;
+    } else {
+        const data = await getNFTPoolInfo(mint);
+        if (data.active != 1) fromVault = 0;
+    }
+
+    let tx;
+    if (fromVault) tx = await createTransferFromVaultTx(mint, payer.publicKey, recipient, program, solConnection);
+    else tx = await createTransferTx(mint, payer.publicKey, recipient, program, solConnection);
+
     const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
