@@ -9,14 +9,14 @@ Solana NFT Marketplace program with NFT Trading & Auction
 - Confirm deploy authority wallet keypair location : f.e. `wallet = "/home/ubuntu/deploy-keypair.json"
 - Configure solana cli with deploy authority keypair and deploying cluster : f.e. `solana config set -h`
 - Build program with `anchor build`
-- Copy and paste the result deploy scripts from Build terminal message : f.e. `solana program deploy /home/ubuntu/project/target/deploy/astro_marketplace.so`
+- Copy and paste the result deploy scripts from Build terminal message : f.e. `solana program deploy /home/ubuntu/project/target/deploy/mds_marketplace.so`
 
 ### To Change Program Address
 
-- Delete the program keypair in `/target/deploy/astro_marketplace-keypair.json`
+- Delete the program keypair in `/target/deploy/mds_marketplace-keypair.json`
 - Build project with `anchor build`. This will generate new keypair
-- Get the address of new keypair with `solana address --keypair ./target/deploy/astro_marketplace-keypair.json`
-- Change program addresses in project code. `Anchor.toml`, `/program/Astro_Marketplace/src/lib.rs`
+- Get the address of new keypair with `solana address --keypair ./target/deploy/mds_marketplace-keypair.json`
+- Change program addresses in project code. `Anchor.toml`, `/program/Mds_Marketplace/src/lib.rs`
 - Build program object again with `anchor build`
 - Deploy newly built so file with `solana program deploy`
 
@@ -51,7 +51,6 @@ Get global PDA info of program. This will show marketplace fee the treasury wall
 ### update_fee
 Admin able to update the Marketplace Fee with this command as Admin.
 - `sol_fee` is the fee in permyraid
-- `token_fee` is the abb fee in permyraid
 
 ### add_treasury
 Admin able to add the team treasury wallet distribution rate for the marketplace fee charge.
@@ -70,11 +69,15 @@ This command should be executed for the first time usage of each traders.
 Get user PDA info for traders. This will show user escrow balance and traded volume info.
 - `address` is the trader wallet address
 
+### transfer
+Transfer NFT from Sender wallet or it's listed Escrow Account to the Recipient.
+- `address` is the NFT mint address
+- `recipient` is the recipient wallet address
+
 ### list
 List NFT for sale as Seller.
 - `address` is the NFT mint address
 - `price_sol` is the listing price of NFT
-- `price_token` is the listing abb price of NFT
 
 ### delist
 Cancel Listing of NFT as Seller.
@@ -83,13 +86,11 @@ Cancel Listing of NFT as Seller.
 ### purchase
 Purchase the Listed NFT with `Buy Now` price as Buyer.
 - `address` is the NFT mint address
-- `by_token` is true for ABB purchasing
 
 ### make_offer
 Make offer for a particular Listed NFT as Buyer.
 - `address` is the NFT mint address
 - `price` is the offering price. Should be in range of `x1 ~ x0.5` of listed price
-- `by_token` is true for ABB purchasing
 
 ### cancel_offer
 Cancel maden offer for a particular Listed NFT as Buyer.
@@ -105,8 +106,8 @@ Create Auction for a particular NFT for funny trading as Seller.
 - `address` is the NFT mint address
 - `start_price` is the bidding start price
 - `min_increase` is the minimum increasing amount for the higer bidding
-- `end_date` is the auction period since started time by second
-- `by_token` is true for ABB purchasing
+- `duration` is the auction period since started time by second
+- `reserve` if this is 1, then the auction is reserve to start from the first bid placed date. Default 0
 
 ### palce_bid
 Participate in auction with higher bidding as Buyer.
