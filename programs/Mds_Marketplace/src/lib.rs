@@ -381,11 +381,6 @@ pub mod mds_marketplace {
         let nft_metadata = Metadata::from_account_info(mint_metadata)?;
 
        
-        // Assert NFT Pubkey with Sell Data PDA Mint
-        require!(
-            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
-            MarketplaceError::InvalidNFTDataAcount
-        );
         require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
         // Assert Seller Sell Data Address
         require!(
@@ -423,12 +418,11 @@ pub mod mds_marketplace {
             MarketplaceError::TeamTreasuryCountMismatch
         );
 
-        let share_fee = nft_metadata.data.seller_fee_basis_points as u64;
+        let total_share_fee =  sell_data_info.price_sol * (nft_metadata.data.seller_fee_basis_points as u64) /PERMYRIAD;
         let fee_amount: u64 =
             sell_data_info.price_sol * global_authority.market_fee_sol/ PERMYRIAD;
-        let total_fee_amount: u64 =
-            sell_data_info.price_sol * (global_authority.market_fee_sol+ share_fee)/ PERMYRIAD;
-
+        let total_fee_amount: u64 = total_share_fee + fee_amount;
+            
 
         invoke(
             &system_instruction::transfer(
@@ -468,7 +462,7 @@ pub mod mds_marketplace {
                     for creator in creators {
                         if creator.address == team_account.key() && creator.share != 0 {
                             let share_amount: u64 =
-                            sell_data_info.price_sol * share_fee / PERMYRIAD * (creator.share as u64)/ 100;
+                            total_share_fee * (creator.share as u64)/ 100;
                             invoke(
                                 &system_instruction::transfer(
                                     ctx.accounts.buyer.key,
@@ -754,11 +748,6 @@ pub mod mds_marketplace {
             MarketplaceError::InvalidOwner
         );
 
-        // Assert NFT Pubkey with Sell Data PDA Mint
-        require!(
-            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
-            MarketplaceError::InvalidNFTDataAcount
-        );
         // Assert Already Delisted NFT
         require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
         // Assert Seller Pubkey with Sell Data PDA Seller Address
@@ -820,11 +809,11 @@ pub mod mds_marketplace {
             MarketplaceError::TeamTreasuryCountMismatch
         );
 
-        let share_fee = nft_metadata.data.seller_fee_basis_points as u64;
+        let total_share_fee = offer_data_info.offer_price * (nft_metadata.data.seller_fee_basis_points as u64) / PERMYRIAD;
         let fee_amount: u64 =
             offer_data_info.offer_price * global_authority.market_fee_sol / PERMYRIAD;
         let total_fee_amount: u64 =
-            offer_data_info.offer_price * (global_authority.market_fee_sol+ share_fee)/ PERMYRIAD;
+            fee_amount + total_share_fee;
 
 
         invoke_signed(
@@ -868,7 +857,7 @@ pub mod mds_marketplace {
                     for creator in creators {
                         if creator.address == team_account.key() && creator.share != 0 {
                             let share_amount: u64 =
-                            offer_data_info.offer_price * share_fee / PERMYRIAD * (creator.share as u64)/ 100;
+                            total_share_fee * (creator.share as u64)/ 100;
                             invoke_signed(
                                 &system_instruction::transfer(
                                     ctx.accounts.escrow_vault.key,
@@ -1187,11 +1176,11 @@ pub mod mds_marketplace {
             MarketplaceError::TeamTreasuryCountMismatch
         );
 
-        let share_fee = nft_metadata.data.seller_fee_basis_points as u64;
+        let total_share_fee = auction_data_info.highest_bid * (nft_metadata.data.seller_fee_basis_points as u64)/PERMYRIAD;
         let fee_amount: u64 =
             auction_data_info.highest_bid * global_authority.market_fee_sol / PERMYRIAD;
         let total_fee_amount: u64 =
-            auction_data_info.highest_bid * (global_authority.market_fee_sol+ share_fee)/ PERMYRIAD;
+            total_share_fee + fee_amount;
 
 
         invoke_signed(
@@ -1236,7 +1225,7 @@ pub mod mds_marketplace {
                     for creator in creators {
                         if creator.address == team_account.key() && creator.share != 0 {
                             let share_amount: u64 =
-                            auction_data_info.highest_bid * share_fee / PERMYRIAD * (creator.share as u64)/ 100;
+                            total_share_fee * (creator.share as u64)/ 100;
                             invoke_signed(
                                 &system_instruction::transfer(
                                     ctx.accounts.escrow_vault.key,

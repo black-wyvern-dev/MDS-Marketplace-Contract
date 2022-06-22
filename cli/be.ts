@@ -81,7 +81,7 @@ const main = async () => {
     }
     if (valid > -1) {
     }
-    console.log(dd.meta.preTokenBalances);
+    console.log(dd.meta.innerInstructions[1]);
     
 
 };
