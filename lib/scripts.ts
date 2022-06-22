@@ -33,6 +33,7 @@ import {
     isExistAccount,
     METAPLEX,
 } from './utils';
+import { programs } from "@metaplex/js";
 
 /** Get all registered NFTs info for max stake amount calculation */
 export const getAllListedNFTs = async (connection: Connection, rpcUrl: string | undefined) => {
@@ -867,9 +868,34 @@ export const createPurchaseTx = async (
     );
 
     console.log('Seller = ', seller.toBase58());
+    
+    const mintMetadata = await getMetadata(mint);
+    console.log("Metadata=", mintMetadata.toBase58());
+    
+    let { metadata: { Metadata } } = programs;
+    let metadataAccount = await Metadata.getPDA(mint);
+    const metadata = await Metadata.load(connection, metadataAccount);
+    let creators = metadata.data.data.creators;
+
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
+
+    let remainingAccounts = [];
+    treasuryAccounts.map((address) => {
+        remainingAccounts.push({
+            pubkey: address,
+            isWritable: true,
+            isSigner: false,
+        })
+    });
+    creators.map((creator) => {
+        remainingAccounts.push({
+            pubkey: new PublicKey(creator.address),
+            isWritable: true,
+            isSigner: false,
+        })
+    });
 
     if (ret.instructions.length > 0) ret.instructions.map((ix) => tx.add(ix));
     console.log('==> Purchasing', mint.toBase58(),);
@@ -885,18 +911,14 @@ export const createPurchaseTx = async (
             nftMint: mint,
             seller,
             sellerUserPool,
+            mintMetadata,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
+            tokenMetadataProgram: METAPLEX,
         },
         instructions: [],
         signers: [],
-        remainingAccounts: treasuryAccounts.map((address) => {
-            return {
-                pubkey: address,
-                isWritable: true,
-                isSigner: false,
-            }
-        }),
+        remainingAccounts,
     }));
 
     return tx;
@@ -1062,10 +1084,37 @@ export const createAcceptOfferTx = async (
 
     console.log('escrowVault = ', escrowVault.toBase58());
 
+
+    const mintMetadata = await getMetadata(mint);
+    console.log("Metadata=", mintMetadata.toBase58());
+    
+    let { metadata: { Metadata } } = programs;
+    let metadataAccount = await Metadata.getPDA(mint);
+    const metadata = await Metadata.load(connection, metadataAccount);
+    let creators = metadata.data.data.creators;
+
+
+
     if (ret.instructions.length > 0) ret.instructions.map((ix) => tx.add(ix));
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
+
+    let remainingAccounts = [];
+    treasuryAccounts.map((address) => {
+        remainingAccounts.push({
+            pubkey: address,
+            isWritable: true,
+            isSigner: false,
+        })
+    });
+    creators.map((creator) => {
+        remainingAccounts.push({
+            pubkey: new PublicKey(creator.address),
+            isWritable: true,
+            isSigner: false,
+        })
+    });
 
     console.log('==> Accept Offer  Mint:', mint.toBase58(),
         'Buyer:', buyer.toBase58(), 'Seller:', seller.toBase58(),
@@ -1085,18 +1134,14 @@ export const createAcceptOfferTx = async (
             userNftTokenAccount: ret.destinationAccounts[0],
             destNftTokenAccount,
             escrowVault,
+            mintMetadata,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
+            tokenMetadataProgram: METAPLEX,
         },
         instructions: [],
         signers: [],
-        remainingAccounts: treasuryAccounts.map((address) => {
-            return {
-                pubkey: address,
-                isWritable: true,
-                isSigner: false,
-            }
-        }),
+        remainingAccounts,
     }));
 
     return tx;
@@ -1296,9 +1341,33 @@ export const createClaimAuctionTx = async (
         [Buffer.from(USER_DATA_SEED), creator.toBuffer()],
         MARKETPLACE_PROGRAM_ID,
     );
+    
+    const mintMetadata = await getMetadata(mint);
+    console.log("Metadata=", mintMetadata.toBase58());
+    
+    let { metadata: { Metadata } } = programs;
+    let metadataAccount = await Metadata.getPDA(mint);
+    const metadata = await Metadata.load(connection, metadataAccount);
+    let creators = metadata.data.data.creators;
 
     let treasuryAccounts: PublicKey[] = treasuryAddresses;
     console.log("=> Treasury Accounts:", treasuryAccounts.map((address) => address.toBase58()));
+
+    let remainingAccounts = [];
+    treasuryAccounts.map((address) => {
+        remainingAccounts.push({
+            pubkey: address,
+            isWritable: true,
+            isSigner: false,
+        })
+    });
+    creators.map((creator) => {
+        remainingAccounts.push({
+            pubkey: new PublicKey(creator.address),
+            isWritable: true,
+            isSigner: false,
+        })
+    });
 
     console.log('==> claiming Auction', mint.toBase58(), userAddress.toBase58(),
         'Creator:', creator.toBase58());
@@ -1315,18 +1384,15 @@ export const createClaimAuctionTx = async (
             creator,
             bidderUserPool: userPool,
             creatorUserPool,
+            mintMetadata,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
+            tokenMetadataProgram: METAPLEX,
+
         },
         instructions: [],
         signers: [],
-        remainingAccounts: treasuryAddresses.map((address) => {
-            return {
-                pubkey: address,
-                isWritable: true,
-                isSigner: false,
-            }
-        }),
+        remainingAccounts,
     }));
 
     return tx;
