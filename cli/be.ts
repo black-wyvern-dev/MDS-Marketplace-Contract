@@ -21,22 +21,22 @@ anchor.setProvider(anchor.AnchorProvider.local(web3.clusterApiUrl("devnet")));
 const solConnection = anchor.getProvider().connection;
 const payer = anchor.AnchorProvider.local().wallet;
 var nonce = [
-    's',
+    'AsUkG8p1',
     '3BzKBJUk',
     'HY2XrSxn',
     'AJbPzu2U',
+    'PcLYN6YP',
     '4G2WiD2C',
-    'sd',
     '4eW8amCV',
-    '2BWUiNsL',
+    '6Ahuf6jr',
     'UJJfJRLD',
     '5p6KPRCQ',
     'QPHXB9jL',
-    '', 
-    '',
+    'BE4DeeJT', 
+    'AnGz4SzU',
     'VcryEr2T',
     '3zENZMgC',
-    '',
+    '2BWUiNsL',
     '2SaBBC7P',
     'ZkCkv1Hg',
     'QMNFmXsk',
@@ -57,7 +57,7 @@ export const getAllTransactions = async (
     const data = await solConnection.getSignaturesForAddress(contractId, {}, "confirmed");
     data.map( async (datum) => {
         let tx = await getDataFromSignature(datum.signature);
-        console.log(tx);
+        // console.log(tx);
     })
 }
 
@@ -65,7 +65,6 @@ export const getDataFromSignature = async (
     sig: string
 ) => {
     const tx = await solConnection.getParsedTransaction(sig, 'confirmed');
-    // console.log(tx.transaction.message.instructions);
     let length = tx.transaction.message.instructions.length;
     let valid = -1;
     let hash;
@@ -84,6 +83,7 @@ export const getDataFromSignature = async (
             break;
         }
     }
+    console.log(hash,"+++++++++++++++++++++++++", sig);
     if (valid == -1) return;
 
     let innerIx;
