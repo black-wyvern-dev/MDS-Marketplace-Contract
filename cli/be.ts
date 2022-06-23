@@ -57,7 +57,7 @@ export const getAllTransactions = async (
     const data = await solConnection.getSignaturesForAddress(contractId, {}, "confirmed");
     data.map( async (datum) => {
         let tx = await getDataFromSignature(datum.signature);
-        // console.log(tx);
+        console.log(tx);
     })
 }
 
@@ -83,7 +83,6 @@ export const getDataFromSignature = async (
             break;
         }
     }
-    console.log(hash,"+++++++++++++++++++++++++", sig);
     if (valid == -1) return;
 
     let innerIx;
