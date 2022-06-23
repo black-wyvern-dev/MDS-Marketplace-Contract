@@ -46,8 +46,7 @@ var nonce = [
 
 const main = async () => {
 
-    const data = await getAllTransactions(new PublicKey("C29hER4SXQr3atHsuCrRmLAkXBpxvfLMCNeXg2TRTd9o"), 10);
-    console.log(data, 'aaaaa');
+    await getAllTransactions(new PublicKey("C29hER4SXQr3atHsuCrRmLAkXBpxvfLMCNeXg2TRTd9o"), 10);
     // 44GoMVetnJTUJUYzbVbydKVU2f6UoK73Hhew7WW76xBRuyqJZwRXNcCt2dmPhnvjPjZmAsVCLoQDTDuKjQoYFZq3
     // 5JUKdSyZBVtiFxapy54dLoUda1muBeLhQNQcMXTrfU3CmrChmvAFbGxoxZW3s8vmpDzm18fCHBn6gmAyStUDw7Dh
 }
@@ -56,15 +55,11 @@ export const getAllTransactions = async (
     contractId: PublicKey,
     maxLimit: number
 ) => {
-    const data = await solConnection.getSignaturesForAddress(contractId, {"limit": maxLimit}, "confirmed");
-    let transactions = [];
+    const data = await solConnection.getSignaturesForAddress(contractId, {}, "confirmed");
     data.map( async (datum) => {
         let tx = await getDataFromSignature(datum.signature);
-        transactions.push(tx);
+        console.log(tx);
     })
-    console.log(transactions);
-    return transactions;
-
 }
 
 export const getDataFromSignature = async (
