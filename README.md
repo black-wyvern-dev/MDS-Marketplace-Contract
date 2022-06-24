@@ -150,3 +150,7 @@ For the FE side web3 integration, the scripts in `lib` directory can be use with
 The only thing the FE dev should change is providing `web3 connection` & the `anchor program` object from idl.
 There is the code part for the `keypair` wallet based `cli` environement case in `cli/scripts`.
 Should configure properly in `BROWSER` environment.
+
+## BE Tracking Service Activity Parsing Script
+This script will fetch past Txs reacted with Our Marketplace Smartcontract. Then will parse an activity from each Txs so that use the info for DB sync up. \
+`yarn be`
