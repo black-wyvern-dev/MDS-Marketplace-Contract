@@ -301,6 +301,17 @@ export const listNftForSale = async (
         await initSellData(mint);
     }
 
+    const [auctionData] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('Auction Data PDA: ', auctionData.toBase58());
+
+    poolAccount = await solConnection.getAccountInfo(auctionData);
+    if (poolAccount === null || poolAccount.data === null) {
+        await initAuctionData(mint);
+    }
+
     const tx = await createListForSellNftTx(mint, payer.publicKey, program, solConnection, priceSol);
     const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
@@ -476,13 +487,24 @@ export const createAuction = async (
         return;
     }
 
-    const [auctionData, _] = await PublicKey.findProgramAddress(
+    const [sellData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+    console.log('Sell Data PDA: ', sellData.toBase58());
+
+    let poolAccount = await solConnection.getAccountInfo(sellData);
+    if (poolAccount === null || poolAccount.data === null) {
+        await initSellData(mint);
+    }
+
+    const [auctionData] = await PublicKey.findProgramAddress(
         [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
         MARKETPLACE_PROGRAM_ID,
     );
     console.log('Auction Data PDA: ', auctionData.toBase58());
 
-    let poolAccount = await solConnection.getAccountInfo(auctionData);
+    poolAccount = await solConnection.getAccountInfo(auctionData);
     if (poolAccount === null || poolAccount.data === null) {
         await initAuctionData(mint);
     }

@@ -132,6 +132,7 @@ pub mod mds_marketplace {
         ctx: Context<ListNftForSale>,
         _global_bump: u8,
         _sell_bump: u8,
+        _auction_bump: u8,
         price_sol: u64,
     ) -> Result<()> {
         let sell_data_info = &mut ctx.accounts.sell_data_info;
@@ -142,6 +143,27 @@ pub mod mds_marketplace {
             ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
             MarketplaceError::InvalidNFTDataAcount
         );
+
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
+        // Assert NFT Pubkey with Auction Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+
+        // Assert Reserved Or Not Started Auction
+        require!(
+            auction_data_info.status == 0 || auction_data_info.status == 3,
+            MarketplaceError::ListingNotAvailable
+        );
+
+        // Assert Owner Pubkey is same with the Auction Data Creator if NFT is in Reserved Auction
+        if auction_data_info.status == 3 {
+            require!(
+                ctx.accounts.owner.key().eq(&auction_data_info.creator),
+                MarketplaceError::CreatorAccountMismatch
+            );
+        }
 
         // Get Collection address from Metadata
         let mint_metadata = &mut &ctx.accounts.mint_metadata;
@@ -176,6 +198,7 @@ pub mod mds_marketplace {
             return Err(error!(MarketplaceError::MetadataCreatorParseError));
         };
 
+        // Save Sell Data info
         let timestamp = Clock::get()?.unix_timestamp;
         msg!("Listed Date: {}", timestamp);
 
@@ -188,15 +211,30 @@ pub mod mds_marketplace {
         let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
         let token_program = &mut &ctx.accounts.token_program;
 
-        let cpi_accounts = Transfer {
-            from: token_account_info.to_account_info().clone(),
-            to: dest_token_account_info.to_account_info().clone(),
-            authority: ctx.accounts.owner.to_account_info().clone(),
-        };
-        token::transfer(
-            CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-            1,
-        )?;
+        // Transfer NFT only Not in Reserved Auction
+        if auction_data_info.status == 0 {
+            // Assert NFT is in user Account
+            require!(
+                token_account_info.amount == 1,
+                MarketplaceError::NFTIsNotInUserATA
+            );
+
+            let cpi_accounts = Transfer {
+                from: token_account_info.to_account_info().clone(),
+                to: dest_token_account_info.to_account_info().clone(),
+                authority: ctx.accounts.owner.to_account_info().clone(),
+            };
+            token::transfer(
+                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
+                1,
+            )?;
+        } else {
+            // Assert NFT is in escrow Account
+            require!(
+                dest_token_account_info.amount == 1,
+                MarketplaceError::NFTIsNotInEscrowATA
+            );
+        }
 
         Ok(())
     }
@@ -956,6 +994,7 @@ pub mod mds_marketplace {
         ctx: Context<CreateAuction>,
         _global_bump: u8,
         _auction_bump: u8,
+        _sell_bump: u8,
         start_price: u64,
         min_increase: u64,
         duration: i64,
@@ -972,6 +1011,26 @@ pub mod mds_marketplace {
             MarketplaceError::InvalidNFTDataAcount
         );
 
+        let sell_data_info = &mut ctx.accounts.sell_data_info;
+
+        // Assert NFT Pubkey with Sell Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+
+        // Shouldn't listed to create normal auction creation
+        if reserved == 0 {
+            require!(sell_data_info.active == 0, MarketplaceError::NotListedNFT);
+        }
+        // Assert NFT seller is payer
+        if sell_data_info.active == 1 {
+            require!(
+                ctx.accounts.owner.key().eq(&sell_data_info.seller),
+                MarketplaceError::SellerMismatch
+            );
+        }
+        
         let timestamp = Clock::get()?.unix_timestamp;
         msg!("Created Date: {}", timestamp);
 
@@ -992,15 +1051,30 @@ pub mod mds_marketplace {
         let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
         let token_program = &mut &ctx.accounts.token_program;
 
-        let cpi_accounts = Transfer {
-            from: token_account_info.to_account_info().clone(),
-            to: dest_token_account_info.to_account_info().clone(),
-            authority: ctx.accounts.owner.to_account_info().clone(),
-        };
-        token::transfer(
-            CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
-            1,
-        )?;
+        // Transfer NFT only Not listed
+        if sell_data_info.active == 0 {
+            // Assert NFT is in user Account
+            require!(
+                token_account_info.amount == 1,
+                MarketplaceError::NFTIsNotInUserATA
+            );
+
+            let cpi_accounts = Transfer {
+                from: token_account_info.to_account_info().clone(),
+                to: dest_token_account_info.to_account_info().clone(),
+                authority: ctx.accounts.owner.to_account_info().clone(),
+            };
+            token::transfer(
+                CpiContext::new(token_program.clone().to_account_info(), cpi_accounts),
+                1,
+            )?;
+        } else {
+            // Assert NFT is in escrow Account
+            require!(
+                dest_token_account_info.amount == 1,
+                MarketplaceError::NFTIsNotInEscrowATA
+            );
+        }
 
         Ok(())
     }
@@ -1661,7 +1735,6 @@ pub struct ListNftForSale<'info> {
         mut,
         constraint = user_token_account.mint == nft_mint.key(),
         constraint = user_token_account.owner == *owner.key,
-        constraint = user_token_account.amount == 1,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
@@ -1685,6 +1758,13 @@ pub struct ListNftForSale<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
     pub token_metadata_program: AccountInfo<'info>,
+    
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Account<'info, AuctionData>,
 }
 
 #[derive(Accounts)]
@@ -2015,7 +2095,6 @@ pub struct CreateAuction<'info> {
         mut,
         constraint = user_token_account.mint == nft_mint.key(),
         constraint = user_token_account.owner == *owner.key,
-        constraint = user_token_account.amount == 1,
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
@@ -2029,6 +2108,13 @@ pub struct CreateAuction<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub nft_mint: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
+
+    #[account(
+        mut,
+        seeds = [SELL_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub sell_data_info: Account<'info, SellData>,
 }
 
 #[derive(Accounts)]

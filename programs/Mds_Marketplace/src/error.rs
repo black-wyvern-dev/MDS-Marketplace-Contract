@@ -117,4 +117,14 @@ pub enum MarketplaceError {
     // 0x1793
     #[msg("Placing Bid From Auction Creator")]
     BidFromAuctionCreator,
+
+    // 0x1794
+    #[msg("Only Listing and Reserved Auction are possible to exist together")]
+    ListingNotAvailable,
+    // 0x1795
+    #[msg("NFT Is Not In User ATA")]
+    NFTIsNotInUserATA,
+    // 0x1796
+    #[msg("NFT Is Not In Escrow ATA")]
+    NFTIsNotInEscrowATA,
 }

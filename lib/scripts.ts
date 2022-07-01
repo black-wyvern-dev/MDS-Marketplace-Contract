@@ -722,6 +722,11 @@ export const createListForSellNftTx = async (
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
         MARKETPLACE_PROGRAM_ID,
     );
+    
+    const [auctionData, auction_bump] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
 
     let { instructions, destinationAccounts } = await getATokenAccountsNeedCreate(
         connection,
@@ -741,7 +746,7 @@ export const createListForSellNftTx = async (
     console.log('==>listing', mint.toBase58(), priceSol);
 
     tx.add(program.instruction.listNftForSale(
-        bump, nft_bump, new anchor.BN(priceSol), {
+        bump, nft_bump, auction_bump, new anchor.BN(priceSol), {
         accounts: {
             owner: userAddress,
             globalAuthority,
@@ -752,6 +757,7 @@ export const createListForSellNftTx = async (
             mintMetadata: metadata,
             tokenProgram: TOKEN_PROGRAM_ID,
             tokenMetadataProgram: METAPLEX,
+            auctionDataInfo: auctionData,
         },
         instructions: [],
         signers: [],
@@ -1240,6 +1246,11 @@ export const createCreateAuctionTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
+    const [sellData, sell_bump] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+
     let { instructions, destinationAccounts } = await getATokenAccountsNeedCreate(
         connection,
         userAddress,
@@ -1256,7 +1267,7 @@ export const createCreateAuctionTx = async (
         mint.toBase58(), startPrice, minIncrease, duration, reserved);
 
     tx.add(program.instruction.createAuction(
-        bump, nft_bump, new anchor.BN(startPrice),
+        bump, nft_bump, sell_bump, new anchor.BN(startPrice),
         new anchor.BN(minIncrease),
         new anchor.BN(duration), new anchor.BN(reserved ? 1 : 0), {
         accounts: {
@@ -1267,6 +1278,7 @@ export const createCreateAuctionTx = async (
             destNftTokenAccount: destinationAccounts[0],
             nftMint: mint,
             tokenProgram: TOKEN_PROGRAM_ID,
+            sellDataInfo: sellData,
         },
         instructions: [],
         signers: [],

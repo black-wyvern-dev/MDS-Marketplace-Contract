@@ -234,6 +234,11 @@ export type MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -243,6 +248,10 @@ export type MdsMarketplace = {
         },
         {
           "name": "sellBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
           "type": "u8"
         },
         {
@@ -889,6 +898,11 @@ export type MdsMarketplace = {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -898,6 +912,10 @@ export type MdsMarketplace = {
         },
         {
           "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellBump",
           "type": "u8"
         },
         {
@@ -1485,6 +1503,21 @@ export type MdsMarketplace = {
       "code": 6035,
       "name": "BidFromAuctionCreator",
       "msg": "Placing Bid From Auction Creator"
+    },
+    {
+      "code": 6036,
+      "name": "ListingNotAvailable",
+      "msg": "Only Listing and Reserved Auction are possible to exist together"
+    },
+    {
+      "code": 6037,
+      "name": "NFTIsNotInUserATA",
+      "msg": "NFT Is Not In User ATA"
+    },
+    {
+      "code": 6038,
+      "name": "NFTIsNotInEscrowATA",
+      "msg": "NFT Is Not In Escrow ATA"
     }
   ]
 };
@@ -1725,6 +1758,11 @@ export const IDL: MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -1734,6 +1772,10 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "sellBump",
+          "type": "u8"
+        },
+        {
+          "name": "auctionBump",
           "type": "u8"
         },
         {
@@ -2380,6 +2422,11 @@ export const IDL: MdsMarketplace = {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -2389,6 +2436,10 @@ export const IDL: MdsMarketplace = {
         },
         {
           "name": "auctionBump",
+          "type": "u8"
+        },
+        {
+          "name": "sellBump",
           "type": "u8"
         },
         {
@@ -2976,6 +3027,21 @@ export const IDL: MdsMarketplace = {
       "code": 6035,
       "name": "BidFromAuctionCreator",
       "msg": "Placing Bid From Auction Creator"
+    },
+    {
+      "code": 6036,
+      "name": "ListingNotAvailable",
+      "msg": "Only Listing and Reserved Auction are possible to exist together"
+    },
+    {
+      "code": 6037,
+      "name": "NFTIsNotInUserATA",
+      "msg": "NFT Is Not In User ATA"
+    },
+    {
+      "code": 6038,
+      "name": "NFTIsNotInEscrowATA",
+      "msg": "NFT Is Not In Escrow ATA"
     }
   ]
 };
