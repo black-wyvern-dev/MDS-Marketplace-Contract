@@ -816,6 +816,34 @@ export const createDelistNftTx = async (
     return tx;
 }
 
+export const createSetPriceTx = async (
+    mint: PublicKey,
+    userAddress: PublicKey,
+    newPrice: number,
+    program: anchor.Program,
+) => {
+    const [nftData, nft_bump] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID
+    );
+
+    let tx = new Transaction();
+
+    console.log('==> setting price', mint.toBase58(), newPrice);
+    tx.add(program.instruction.setPrice(
+        nft_bump, new anchor.BN(newPrice), {
+        accounts: {
+            owner: userAddress,
+            sellDataInfo: nftData,
+            nftMint: mint,
+        },
+        instructions: [],
+        signers: [],
+    }));
+
+    return tx;
+}
+
 export const createPurchaseTx = async (
     mint: PublicKey,
     userAddress: PublicKey,
@@ -1393,6 +1421,34 @@ export const createClaimAuctionTx = async (
         instructions: [],
         signers: [],
         remainingAccounts,
+    }));
+
+    return tx;
+}
+
+export const createUpdateReserveTx = async (
+    mint: PublicKey,
+    userAddress: PublicKey,
+    newPrice: number,
+    program: anchor.Program,
+) => {
+    const [nftData, nft_bump] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
+
+    let tx = new Transaction();
+
+    console.log('==> Updating reserved price', mint.toBase58(), newPrice);
+    tx.add(program.instruction.updateReserve(
+        nft_bump, new anchor.BN(newPrice), {
+        accounts: {
+            creator: userAddress,
+            auctionDataInfo: nftData,
+            nftMint: mint,
+        },
+        instructions: [],
+        signers: [],
     }));
 
     return tx;

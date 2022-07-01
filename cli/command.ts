@@ -33,6 +33,8 @@ import {
   removeTreasury,
   initUserPool,
   transfer,
+  setPrice,
+  updateReserve,
 } from "./scripts";
 
 dotenv.config({ path: __dirname + '/../.env' });
@@ -241,6 +243,32 @@ programCommand('delist')
     await delistNft(new PublicKey(address));
   });
 
+programCommand('set_price')
+  .option('-a, --address <string>', 'nft mint pubkey')
+  .option('-p, --price_sol <number>', 'new sell price')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .action(async (directory, cmd) => {
+    const {
+      env,
+      address,
+      price_sol,
+    } = cmd.opts();
+
+    console.log('Solana config: ', env);
+    await setClusterConfig(env);
+
+    if (address === undefined) {
+      console.log("Error Mint input");
+      return;
+    }
+    if (price_sol === undefined || isNaN(parseFloat(price_sol))) {
+      console.log("Error Sol Price input");
+      return;
+    }
+
+    await setPrice(new PublicKey(address), parseFloat(price_sol) * LAMPORTS_PER_SOL);
+  });
+
 programCommand('purchase')
   .option('-a, --address <string>', 'nft mint pubkey')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -429,6 +457,35 @@ programCommand('claim_auction')
     }
 
     await claimAuction(new PublicKey(address));
+  });
+
+programCommand('update_reserve')
+  .option('-a, --address <string>', 'nft mint pubkey')
+  .option('-p, --start_price <number>', 'start price')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  .action(async (directory, cmd) => {
+    const {
+      env,
+      address,
+      start_price,
+    } = cmd.opts();
+
+    console.log('Solana config: ', env);
+    await setClusterConfig(env);
+
+    if (address === undefined) {
+      console.log("Error Mint input");
+      return;
+    }
+    if (start_price === undefined || isNaN(parseFloat(start_price))) {
+      console.log("Error Auction Start Price input");
+      return;
+    }
+
+    await updateReserve(
+      new PublicKey(address),
+      parseFloat(start_price) * LAMPORTS_PER_SOL,
+    );
   });
 
 programCommand('cancel_auction')

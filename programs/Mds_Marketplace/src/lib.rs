@@ -260,6 +260,28 @@ pub mod mds_marketplace {
         Ok(())
     }
 
+    pub fn set_price(ctx: Context<SetPrice>, _sell_bump: u8, price: u64) -> Result<()> {
+        let sell_data_info = &mut ctx.accounts.sell_data_info;
+        msg!("Mint: {:?}", sell_data_info.mint);
+
+        // Assert NFT Pubkey with Sell Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        // Assert NFT seller is payer
+        require!(
+            ctx.accounts.owner.key().eq(&sell_data_info.seller),
+            MarketplaceError::SellerMismatch
+        );
+        // Assert Already Delisted NFT
+        require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
+
+        sell_data_info.price_sol = price;
+
+        Ok(())
+    }
+
     pub fn transfer(ctx: Context<TransferNft>) -> Result<()> {
         let token_account_info = &mut &ctx.accounts.user_token_account;
         let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
@@ -1291,6 +1313,40 @@ pub mod mds_marketplace {
         Ok(())
     }
 
+    pub fn update_reserve(
+        ctx: Context<UpdateReserve>,
+        _auction_bump: u8,
+        price: u64,
+    ) -> Result<()> {
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
+        msg!("Mint: {:?}", auction_data_info.mint);
+
+       // Assert NFT Pubkey with Auction Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        // Assert Valid Reserved Auction
+        require!(
+            auction_data_info.status == 3,
+            MarketplaceError::NotListedNFT
+        );
+        // Assert Auction Has No Bidder
+        require!(
+            Pubkey::default().eq(&auction_data_info.last_bidder),
+            MarketplaceError::AuctionHasBid
+        );
+        // Assert Creator Pubkey is same with the Auction Data Creator
+        require!(
+            ctx.accounts.creator.key().eq(&auction_data_info.creator),
+            MarketplaceError::CreatorAccountMismatch
+        );
+
+        auction_data_info.start_price = price;
+
+        Ok(())
+    }
+
     pub fn cancel_auction(
         ctx: Context<CancelAuction>,
         global_bump: u8,
@@ -1669,6 +1725,23 @@ pub struct DelistNft<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub nft_mint: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct SetPrice<'info> {
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [SELL_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub sell_data_info: Account<'info, SellData>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub nft_mint: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -2066,6 +2139,23 @@ pub struct ClaimAuction<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
     pub token_metadata_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct UpdateReserve<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Box<Account<'info, AuctionData>>,
+
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub nft_mint: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

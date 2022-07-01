@@ -29,9 +29,11 @@ import {
     createPlaceBidTx,
     createPurchaseTx,
     createRemoveTreasuryTx,
+    createSetPriceTx,
     createTransferFromVaultTx,
     createTransferTx,
     createUpdateFeeTx,
+    createUpdateReserveTx,
     createWithdrawTx,
     getAllListedNFTs,
     getAllOffersForListedNFT,
@@ -329,6 +331,27 @@ export const delistNft = async (
     console.log("Your transaction signature", txId);
 }
 
+export const setPrice = async (
+    mint: PublicKey,
+    newPrice: number,
+) => {
+    console.log(mint.toBase58(), newPrice);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const tx = await createSetPriceTx(mint, payer.publicKey, newPrice, program);
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
 export const purchase = async (
     mint: PublicKey,
 ) => {
@@ -517,6 +540,27 @@ export const claimAuction = async (
     const globalPool: GlobalPool = await getGlobalState(program);
 
     const tx = await createClaimAuctionTx(mint, payer.publicKey, globalPool.teamTreasury.slice(0, globalPool.teamCount.toNumber()), program, solConnection);
+    const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
+    tx.feePayer = payer.publicKey;
+    tx.recentBlockhash = blockhash;
+    payer.signTransaction(tx);
+    let txId = await solConnection.sendTransaction(tx, [(payer as NodeWallet).payer]);
+    await solConnection.confirmTransaction(txId, "confirmed");
+    console.log("Your transaction signature", txId);
+}
+
+export const updateReserve = async (
+    mint: PublicKey,
+    newPrice: number,
+) => {
+    console.log(mint.toBase58(), newPrice);
+
+    if (!await isInitializedUser(payer.publicKey, solConnection)) {
+        console.log('User PDA is not Initialized. Should Init User PDA for first usage');
+        return;
+    }
+
+    const tx = await createUpdateReserveTx(mint, payer.publicKey, newPrice, program);
     const { blockhash } = await solConnection.getRecentBlockhash('confirmed');
     tx.feePayer = payer.publicKey;
     tx.recentBlockhash = blockhash;
