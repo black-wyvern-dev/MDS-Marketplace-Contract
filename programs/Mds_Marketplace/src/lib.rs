@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 // use solana_program::borsh::try_from_slice_unchecked;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use metaplex_token_metadata::state::Metadata;
+use metaplex_token_metadata::state::{Creator, Metadata};
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::system_instruction;
 
@@ -380,7 +380,6 @@ pub mod mds_marketplace {
         // verify metadata is legit
         let nft_metadata = Metadata::from_account_info(mint_metadata)?;
 
-       
         require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
         // Assert Seller Sell Data Address
         require!(
@@ -413,16 +412,24 @@ pub mod mds_marketplace {
             global_authority.team_count > 0,
             MarketplaceError::NoTeamTreasuryYet
         );
+
+        let creators: &Vec<Creator>;
+        if let Some(cts) = &nft_metadata.data.creators {
+            creators = cts;
+        } else {
+            return Err(error!(MarketplaceError::MetadataCreatorParseError));
+        };
         require!(
-            global_authority.team_count == remaining_accounts.len() as u64,
+            global_authority.team_count + creators.len() as u64 == remaining_accounts.len() as u64,
             MarketplaceError::TeamTreasuryCountMismatch
         );
 
-        let total_share_fee =  sell_data_info.price_sol * (nft_metadata.data.seller_fee_basis_points as u64) /PERMYRIAD;
+        let total_share_fee = sell_data_info.price_sol
+            * (nft_metadata.data.seller_fee_basis_points as u64)
+            / PERMYRIAD;
         let fee_amount: u64 =
-            sell_data_info.price_sol * global_authority.market_fee_sol/ PERMYRIAD;
+            sell_data_info.price_sol * global_authority.market_fee_sol / PERMYRIAD;
         let total_fee_amount: u64 = total_share_fee + fee_amount;
-            
 
         invoke(
             &system_instruction::transfer(
@@ -442,7 +449,9 @@ pub mod mds_marketplace {
         for team_account in remaining_accounts {
             if i < global_authority.team_count {
                 require!(
-                    team_account.key().eq(&global_authority.team_treasury[i as usize]),
+                    team_account
+                        .key()
+                        .eq(&global_authority.team_treasury[i as usize]),
                     MarketplaceError::TeamTreasuryAddressMismatch
                 );
                 invoke(
@@ -458,31 +467,25 @@ pub mod mds_marketplace {
                     ],
                 )?;
             } else {
-                if let Some(creators) = &nft_metadata.data.creators {
-                    for creator in creators {
-                        if creator.address == team_account.key() && creator.share != 0 {
-                            let share_amount: u64 =
-                            total_share_fee * (creator.share as u64)/ 100;
-                            invoke(
-                                &system_instruction::transfer(
-                                    ctx.accounts.buyer.key,
-                                    &team_account.key(),
-                                    share_amount                                
-                                ),
-                                &[
-                                    ctx.accounts.buyer.to_account_info().clone(),
-                                    team_account.clone(),
-                                    ctx.accounts.system_program.to_account_info().clone(),
-                                ],
-                            )?;
-                        }
+                for creator in creators {
+                    if creator.address == team_account.key() && creator.share != 0 {
+                        let share_amount: u64 = total_share_fee * (creator.share as u64) / 100;
+                        invoke(
+                            &system_instruction::transfer(
+                                ctx.accounts.buyer.key,
+                                &team_account.key(),
+                                share_amount,
+                            ),
+                            &[
+                                ctx.accounts.buyer.to_account_info().clone(),
+                                team_account.clone(),
+                                ctx.accounts.system_program.to_account_info().clone(),
+                            ],
+                        )?;
                     }
-                } else {
-                    return Err(error!(MarketplaceError::MetadataCreatorParseError));
-                };
-
+                }
             }
-            
+
             i += 1;
         }
         buyer_user_pool.traded_volume += sell_data_info.price_sol;
@@ -736,7 +739,6 @@ pub mod mds_marketplace {
         // verify metadata is legit
         let nft_metadata = Metadata::from_account_info(mint_metadata)?;
 
-
         // Assert Buyer User PDA Address
         require!(
             ctx.accounts.buyer.key().eq(&buyer_user_pool.address),
@@ -804,17 +806,24 @@ pub mod mds_marketplace {
             global_authority.team_count > 0,
             MarketplaceError::NoTeamTreasuryYet
         );
+
+        let creators: &Vec<Creator>;
+        if let Some(cts) = &nft_metadata.data.creators {
+            creators = cts;
+        } else {
+            return Err(error!(MarketplaceError::MetadataCreatorParseError));
+        };
         require!(
-            global_authority.team_count == remaining_accounts.len() as u64,
+            global_authority.team_count + creators.len() as u64 == remaining_accounts.len() as u64,
             MarketplaceError::TeamTreasuryCountMismatch
         );
 
-        let total_share_fee = offer_data_info.offer_price * (nft_metadata.data.seller_fee_basis_points as u64) / PERMYRIAD;
+        let total_share_fee = offer_data_info.offer_price
+            * (nft_metadata.data.seller_fee_basis_points as u64)
+            / PERMYRIAD;
         let fee_amount: u64 =
             offer_data_info.offer_price * global_authority.market_fee_sol / PERMYRIAD;
-        let total_fee_amount: u64 =
-            fee_amount + total_share_fee;
-
+        let total_fee_amount: u64 = fee_amount + total_share_fee;
 
         invoke_signed(
             &system_instruction::transfer(
@@ -836,7 +845,9 @@ pub mod mds_marketplace {
             if i < global_authority.team_count {
                 // Assert Provided Remaining Account is Treasury
                 require!(
-                    team_account.key().eq(&global_authority.team_treasury[i as usize]),
+                    team_account
+                        .key()
+                        .eq(&global_authority.team_treasury[i as usize]),
                     MarketplaceError::TeamTreasuryAddressMismatch
                 );
                 invoke_signed(
@@ -853,29 +864,24 @@ pub mod mds_marketplace {
                     signer,
                 )?;
             } else {
-                if let Some(creators) = &nft_metadata.data.creators {
-                    for creator in creators {
-                        if creator.address == team_account.key() && creator.share != 0 {
-                            let share_amount: u64 =
-                            total_share_fee * (creator.share as u64)/ 100;
-                            invoke_signed(
-                                &system_instruction::transfer(
-                                    ctx.accounts.escrow_vault.key,
-                                    &team_account.key(),
-                                    share_amount
-                                ),
-                                &[
-                                    ctx.accounts.escrow_vault.to_account_info().clone(),
-                                    team_account.clone(),
-                                    ctx.accounts.system_program.to_account_info().clone(),
-                                ],
-                                signer,
-                            )?;
-                        }
+                for creator in creators {
+                    if creator.address == team_account.key() && creator.share != 0 {
+                        let share_amount: u64 = total_share_fee * (creator.share as u64) / 100;
+                        invoke_signed(
+                            &system_instruction::transfer(
+                                ctx.accounts.escrow_vault.key,
+                                &team_account.key(),
+                                share_amount,
+                            ),
+                            &[
+                                ctx.accounts.escrow_vault.to_account_info().clone(),
+                                team_account.clone(),
+                                ctx.accounts.system_program.to_account_info().clone(),
+                            ],
+                            signer,
+                        )?;
                     }
-                } else {
-                    return Err(error!(MarketplaceError::MetadataCreatorParseError));
-                };
+                }
             }
             i += 1;
         }
@@ -1087,7 +1093,6 @@ pub mod mds_marketplace {
         let auction_data_info = &mut ctx.accounts.auction_data_info;
         msg!("Mint: {:?}", auction_data_info.mint);
 
-        
         // Assert NFT Pubkey with Sell Data PDA Mint
         require!(
             ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
@@ -1171,17 +1176,23 @@ pub mod mds_marketplace {
             global_authority.team_count > 0,
             MarketplaceError::NoTeamTreasuryYet
         );
+
+        let creators: &Vec<Creator>;
+        if let Some(cts) = &nft_metadata.data.creators {
+            creators = cts;
+        } else {
+            return Err(error!(MarketplaceError::MetadataCreatorParseError));
+        };
         require!(
-            global_authority.team_count == remaining_accounts.len() as u64,
+            global_authority.team_count + creators.len() as u64 == remaining_accounts.len() as u64,
             MarketplaceError::TeamTreasuryCountMismatch
         );
-
-        let total_share_fee = auction_data_info.highest_bid * (nft_metadata.data.seller_fee_basis_points as u64)/PERMYRIAD;
+        let total_share_fee = auction_data_info.highest_bid
+            * (nft_metadata.data.seller_fee_basis_points as u64)
+            / PERMYRIAD;
         let fee_amount: u64 =
             auction_data_info.highest_bid * global_authority.market_fee_sol / PERMYRIAD;
-        let total_fee_amount: u64 =
-            total_share_fee + fee_amount;
-
+        let total_fee_amount: u64 = total_share_fee + fee_amount;
 
         invoke_signed(
             &system_instruction::transfer(
@@ -1201,10 +1212,11 @@ pub mod mds_marketplace {
         // This is not expensive cuz the max count is 8
         for team_account in remaining_accounts {
             if i < global_authority.team_count {
-
                 // Assert Provided Remaining Account is Treasury
                 require!(
-                    team_account.key().eq(&global_authority.team_treasury[i as usize]),
+                    team_account
+                        .key()
+                        .eq(&global_authority.team_treasury[i as usize]),
                     MarketplaceError::TeamTreasuryAddressMismatch
                 );
                 invoke_signed(
@@ -1221,29 +1233,24 @@ pub mod mds_marketplace {
                     signer,
                 )?;
             } else {
-                if let Some(creators) = &nft_metadata.data.creators {
-                    for creator in creators {
-                        if creator.address == team_account.key() && creator.share != 0 {
-                            let share_amount: u64 =
-                            total_share_fee * (creator.share as u64)/ 100;
-                            invoke_signed(
-                                &system_instruction::transfer(
-                                    ctx.accounts.escrow_vault.key,
-                                    &team_account.key(),
-                                    share_amount
-                                ),
-                                &[
-                                    ctx.accounts.escrow_vault.to_account_info().clone(),
-                                    team_account.clone(),
-                                    ctx.accounts.system_program.to_account_info().clone(),
-                                ],
-                                signer,
-                            )?;
-                        }
+                for creator in creators {
+                    if creator.address == team_account.key() && creator.share != 0 {
+                        let share_amount: u64 = total_share_fee * (creator.share as u64) / 100;
+                        invoke_signed(
+                            &system_instruction::transfer(
+                                ctx.accounts.escrow_vault.key,
+                                &team_account.key(),
+                                share_amount,
+                            ),
+                            &[
+                                ctx.accounts.escrow_vault.to_account_info().clone(),
+                                team_account.clone(),
+                                ctx.accounts.system_program.to_account_info().clone(),
+                            ],
+                            signer,
+                        )?;
                     }
-                } else {
-                    return Err(error!(MarketplaceError::MetadataCreatorParseError));
-                };
+                }
             }
             i += 1;
         }
@@ -1730,7 +1737,7 @@ pub struct PurchaseNft<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
-    pub token_metadata_program: AccountInfo<'info>, 
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -1891,7 +1898,7 @@ pub struct AcceptOffer<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
-    pub token_metadata_program: AccountInfo<'info>, 
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -2045,7 +2052,7 @@ pub struct ClaimAuction<'info> {
         bump,
     )]
     pub creator_user_pool: Box<Account<'info, UserData>>,
-    
+
     /// the mint metadata
     #[account(
         mut,
@@ -2058,7 +2065,7 @@ pub struct ClaimAuction<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
-    pub token_metadata_program: AccountInfo<'info>, 
+    pub token_metadata_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]

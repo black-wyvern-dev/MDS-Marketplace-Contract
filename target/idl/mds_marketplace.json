@@ -1245,186 +1245,122 @@
       }
     }
   ],
-  "errors": [
+  "types": [
     {
-      "code": 6000,
-      "name": "InvalidSuperOwner",
-      "msg": "Invalid Super Owner"
-    },
-    {
-      "code": 6001,
-      "name": "InvalidOwner",
-      "msg": "Invalid Owner"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidGlobalPool",
-      "msg": "Invalid Global Pool Address"
-    },
-    {
-      "code": 6003,
-      "name": "InvalidFeePercent",
-      "msg": "Marketplace Fee is Permyriad"
-    },
-    {
-      "code": 6004,
-      "name": "MaxTeamCountExceed",
-      "msg": "Max Team Count is 8"
-    },
-    {
-      "code": 6005,
-      "name": "NoTeamTreasuryYet",
-      "msg": "Treasury Wallet Not Configured"
-    },
-    {
-      "code": 6006,
-      "name": "TreasuryAddressNotFound",
-      "msg": "Treasury Address Not Exist"
-    },
-    {
-      "code": 6007,
-      "name": "TreasuryAddressAlreadyAdded",
-      "msg": "Treasury Address Already Exist"
-    },
-    {
-      "code": 6008,
-      "name": "MaxTreasuryRateSumExceed",
-      "msg": "Total Treasury Rate Sum Should Less Than 100%"
-    },
-    {
-      "code": 6009,
-      "name": "TeamTreasuryCountMismatch",
-      "msg": "Team Treasury Wallet Count Mismatch"
-    },
-    {
-      "code": 6010,
-      "name": "TeamTreasuryAddressMismatch",
-      "msg": "Team Treasury Wallet Address Mismatch"
-    },
-    {
-      "code": 6011,
-      "name": "Uninitialized",
-      "msg": "Uninitialized Account"
-    },
-    {
-      "code": 6012,
-      "name": "InvalidParamInput",
-      "msg": "Instruction Parameter is Invalid"
-    },
-    {
-      "code": 6013,
-      "name": "SellerMismatch",
-      "msg": "Payer Mismatch with NFT Seller"
-    },
-    {
-      "code": 6014,
-      "name": "InvalidNFTDataAcount",
-      "msg": "Invalid NFT Data Account"
-    },
-    {
-      "code": 6015,
-      "name": "NotListedNFT",
-      "msg": "The NFT Is Not Listed"
-    },
-    {
-      "code": 6016,
-      "name": "SellerAccountMismatch",
-      "msg": "Seller Account Mismatch with NFT Seller Data"
-    },
-    {
-      "code": 6017,
-      "name": "InsufficientBuyerSolBalance",
-      "msg": "Buyer Sol Balance is Less than NFT SOL Price"
-    },
-    {
-      "code": 6018,
-      "name": "InsufficientBuyerTokenBalance",
-      "msg": "Buyer Token Balance is Less than NFT Token Price"
-    },
-    {
-      "code": 6019,
-      "name": "InvaliedMetadata",
-      "msg": "Invalid Metadata Address"
-    },
-    {
-      "code": 6020,
-      "name": "MetadataCreatorParseError",
-      "msg": "Can't Parse The NFT's Creators"
-    },
-    {
-      "code": 6021,
-      "name": "InvalidOfferDataMint",
-      "msg": "Offer Data Mint mismatch with NFT Pubkey"
-    },
-    {
-      "code": 6022,
-      "name": "InvalidOfferDataBuyer",
-      "msg": "Offer Data Buyer mismatch with Payer Pubkey"
-    },
-    {
-      "code": 6023,
-      "name": "OfferForNotListedNFT",
-      "msg": "Making Offer for Not Listed NFT"
-    },
-    {
-      "code": 6024,
-      "name": "InvalidOfferPrice",
-      "msg": "Offer Price Over Thank Listed Price"
-    },
-    {
-      "code": 6025,
-      "name": "DisabledOffer",
-      "msg": "Already Canceled Offer"
-    },
-    {
-      "code": 6026,
-      "name": "OfferForExpiredListingNFT",
-      "msg": "Offer For Sold Or Canceled NFT Listing"
-    },
-    {
-      "code": 6027,
-      "name": "EndedAuction",
-      "msg": "Placing Bid For Ended Auction"
-    },
-    {
-      "code": 6028,
-      "name": "InvalidBidPrice",
-      "msg": "Placing Bid With Lower Than Highest Bid"
-    },
-    {
-      "code": 6029,
-      "name": "DoubleBidFromOneBidder",
-      "msg": "Placing Bid Double From One Bidder"
-    },
-    {
-      "code": 6030,
-      "name": "OutBidderMismatch",
-      "msg": "Out Bidder Account Mismatch With LastBidder Data"
-    },
-    {
-      "code": 6031,
-      "name": "NotEndedAuction",
-      "msg": "Claiming Auction For Not Ended Auction"
-    },
-    {
-      "code": 6032,
-      "name": "CreatorAccountMismatch",
-      "msg": "Creator Account Mismatch with Auction Data"
-    },
-    {
-      "code": 6033,
-      "name": "BidderAccountMismatch",
-      "msg": "Bidder Account Mismatch with Auction Data"
-    },
-    {
-      "code": 6034,
-      "name": "AuctionHasBid",
-      "msg": "Canceling Auction which has Bid"
-    },
-    {
-      "code": 6035,
-      "name": "BidFromAuctionCreator",
-      "msg": "Placing Bid From Auction Creator"
+      "name": "MarketplaceError",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "InvalidSuperOwner"
+          },
+          {
+            "name": "InvalidOwner"
+          },
+          {
+            "name": "InvalidGlobalPool"
+          },
+          {
+            "name": "InvalidFeePercent"
+          },
+          {
+            "name": "MaxTeamCountExceed"
+          },
+          {
+            "name": "NoTeamTreasuryYet"
+          },
+          {
+            "name": "TreasuryAddressNotFound"
+          },
+          {
+            "name": "TreasuryAddressAlreadyAdded"
+          },
+          {
+            "name": "MaxTreasuryRateSumExceed"
+          },
+          {
+            "name": "TeamTreasuryCountMismatch"
+          },
+          {
+            "name": "TeamTreasuryAddressMismatch"
+          },
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "InvalidParamInput"
+          },
+          {
+            "name": "SellerMismatch"
+          },
+          {
+            "name": "InvalidNFTDataAcount"
+          },
+          {
+            "name": "NotListedNFT"
+          },
+          {
+            "name": "SellerAccountMismatch"
+          },
+          {
+            "name": "InsufficientBuyerSolBalance"
+          },
+          {
+            "name": "InsufficientBuyerTokenBalance"
+          },
+          {
+            "name": "InvaliedMetadata"
+          },
+          {
+            "name": "MetadataCreatorParseError"
+          },
+          {
+            "name": "InvalidOfferDataMint"
+          },
+          {
+            "name": "InvalidOfferDataBuyer"
+          },
+          {
+            "name": "OfferForNotListedNFT"
+          },
+          {
+            "name": "InvalidOfferPrice"
+          },
+          {
+            "name": "DisabledOffer"
+          },
+          {
+            "name": "OfferForExpiredListingNFT"
+          },
+          {
+            "name": "EndedAuction"
+          },
+          {
+            "name": "InvalidBidPrice"
+          },
+          {
+            "name": "DoubleBidFromOneBidder"
+          },
+          {
+            "name": "OutBidderMismatch"
+          },
+          {
+            "name": "NotEndedAuction"
+          },
+          {
+            "name": "CreatorAccountMismatch"
+          },
+          {
+            "name": "BidderAccountMismatch"
+          },
+          {
+            "name": "AuctionHasBid"
+          },
+          {
+            "name": "BidFromAuctionCreator"
+          }
+        ]
+      }
     }
   ]
 }
