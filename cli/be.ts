@@ -42,7 +42,10 @@ var nonce = [
     'QMNFmXsk',
     'AtH7do4b',
     '882wV271',
-    '9mtdhZPt'];
+    '9mtdhZPt',
+    '9mE5kJpm',
+    'Sc9FjYDt',
+];
 
 const main = async () => {
 
@@ -83,15 +86,23 @@ export const getDataFromSignature = async (
             break;
         }
     }
-    if (valid == -1) return;
 
+    let ts = tx.blockTime;
+    let date = new Date(ts * 1000)
+    if (valid == -1) return;
+        // return {
+        //     'type': 'Unknown',
+        //     'address': tx.transaction.message.accountKeys[0].pubkey.toBase58(),
+        //     'timestamp': ts,
+        //     'date': date,
+        //     'signature': sig,
+        // };
+    
     let innerIx;
     if (tx.meta.innerInstructions.length !== 0) {
         innerIx = tx.meta.innerInstructions[ixId].instructions;
     }
-
-    let ts = tx.blockTime;
-    let date = new Date(ts * 1000)
+    
     let accountKeys = (tx.transaction.message.instructions[ixId] as PartiallyDecodedInstruction).accounts;
     let signer = accountKeys[0].toBase58();
     let result;
@@ -367,11 +378,41 @@ export const getDataFromSignature = async (
                 'signature': sig,
             }
             break; 
-        }                    
+        }
+        case 22:{
+            console.log("SetPrice");
+            let bytes = bs58.decode(hash)
+            let b = bytes.slice(9, 17).reverse();
+            let price = new anchor.BN(b).toNumber();
+            result = {
+                'type': 'SetPrice',
+                'address': signer,
+                'mint': accountKeys[2].toBase58(),
+                'price': price,
+                'timestamp': ts,
+                'date': date,
+                'signature': sig,
+            }
+            break; 
+        }
+        case 23:{
+            console.log("UpdateReverse");
+            let bytes = bs58.decode(hash)
+            let b = bytes.slice(9, 17).reverse();
+            let price = new anchor.BN(b).toNumber();
+            result = {
+                'type': 'UpdateReverse',
+                'address': signer,
+                'mint': accountKeys[2].toBase58(),
+                'price': price,
+                'timestamp': ts,
+                'date': date,
+                'signature': sig,
+            }
+            break; 
+        }
     }
     return result;
-
-
 }
 
 
