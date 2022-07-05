@@ -241,6 +241,7 @@ pub mod mds_marketplace {
 
     pub fn delist_nft(ctx: Context<DelistNft>, global_bump: u8, _sell_bump: u8) -> Result<()> {
         let sell_data_info = &mut ctx.accounts.sell_data_info;
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
         msg!("Mint: {:?}", sell_data_info.mint);
 
         // Assert NFT Pubkey with Sell Data PDA Mint
@@ -255,6 +256,18 @@ pub mod mds_marketplace {
         );
         // Assert Already Delisted NFT
         require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
+        // Assert NFT Pubkey with Auction Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        if auction_data_info.status == 3 {
+            // Assert Creator Pubkey is same with the Auction Data Creator
+            require!(
+                ctx.accounts.owner.key().eq(&auction_data_info.creator),
+                MarketplaceError::CreatorAccountMismatch
+            );
+        }
 
         sell_data_info.active = 0;
 
@@ -264,36 +277,38 @@ pub mod mds_marketplace {
         let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
         let signer = &[&seeds[..]];
 
-        let cpi_accounts = Transfer {
-            from: dest_token_account_info.to_account_info().clone(),
-            to: token_account_info.to_account_info().clone(),
-            authority: ctx.accounts.global_authority.to_account_info(),
-        };
-        token::transfer(
-            CpiContext::new_with_signer(
-                token_program.clone().to_account_info(),
-                cpi_accounts,
-                signer,
-            ),
-            1,
-        )?;
+        if auction_data_info.status != 3 {
+            let cpi_accounts = Transfer {
+                from: dest_token_account_info.to_account_info().clone(),
+                to: token_account_info.to_account_info().clone(),
+                authority: ctx.accounts.global_authority.to_account_info(),
+            };
+            token::transfer(
+                CpiContext::new_with_signer(
+                    token_program.clone().to_account_info(),
+                    cpi_accounts,
+                    signer,
+                ),
+                1,
+            )?;
 
-        invoke_signed(
-            &spl_token::instruction::close_account(
-                token_program.key,
-                &dest_token_account_info.key(),
-                ctx.accounts.owner.key,
-                &ctx.accounts.global_authority.key(),
-                &[],
-            )?,
-            &[
-                token_program.clone().to_account_info(),
-                dest_token_account_info.to_account_info().clone(),
-                ctx.accounts.owner.to_account_info().clone(),
-                ctx.accounts.global_authority.to_account_info().clone(),
-            ],
-            signer,
-        )?;
+            invoke_signed(
+                &spl_token::instruction::close_account(
+                    token_program.key,
+                    &dest_token_account_info.key(),
+                    ctx.accounts.owner.key,
+                    &ctx.accounts.global_authority.key(),
+                    &[],
+                )?,
+                &[
+                    token_program.clone().to_account_info(),
+                    dest_token_account_info.to_account_info().clone(),
+                    ctx.accounts.owner.to_account_info().clone(),
+                    ctx.accounts.global_authority.to_account_info().clone(),
+                ],
+                signer,
+            )?;
+        }
 
         Ok(())
     }
@@ -1427,6 +1442,8 @@ pub mod mds_marketplace {
         _auction_bump: u8,
     ) -> Result<()> {
         let auction_data_info = &mut ctx.accounts.auction_data_info;
+        let sell_data_info = &mut ctx.accounts.sell_data_info;
+        
         msg!("Mint: {:?}", auction_data_info.mint);
 
         let timestamp = Clock::get()?.unix_timestamp;
@@ -1456,6 +1473,19 @@ pub mod mds_marketplace {
             ctx.accounts.creator.key().eq(&auction_data_info.creator),
             MarketplaceError::CreatorAccountMismatch
         );
+        
+        // Assert NFT Pubkey with Sell Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        if sell_data_info.active == 1 {
+            // Assert NFT seller is payer
+            require!(
+                ctx.accounts.creator.key().eq(&sell_data_info.seller),
+                MarketplaceError::SellerMismatch
+            );
+        }
 
         auction_data_info.status = 0;
 
@@ -1465,36 +1495,38 @@ pub mod mds_marketplace {
         let seeds = &[GLOBAL_AUTHORITY_SEED.as_bytes(), &[global_bump]];
         let signer = &[&seeds[..]];
 
-        let cpi_accounts = Transfer {
-            from: dest_token_account_info.to_account_info().clone(),
-            to: token_account_info.to_account_info().clone(),
-            authority: ctx.accounts.global_authority.to_account_info().clone(),
-        };
-        token::transfer(
-            CpiContext::new_with_signer(
-                token_program.clone().to_account_info(),
-                cpi_accounts,
-                signer,
-            ),
-            1,
-        )?;
+        if sell_data_info.active == 0 {
+            let cpi_accounts = Transfer {
+                from: dest_token_account_info.to_account_info().clone(),
+                to: token_account_info.to_account_info().clone(),
+                authority: ctx.accounts.global_authority.to_account_info().clone(),
+            };
+            token::transfer(
+                CpiContext::new_with_signer(
+                    token_program.clone().to_account_info(),
+                    cpi_accounts,
+                    signer,
+                ),
+                1,
+            )?;
 
-        invoke_signed(
-            &spl_token::instruction::close_account(
-                token_program.key,
-                &dest_token_account_info.key(),
-                ctx.accounts.creator.key,
-                &ctx.accounts.global_authority.key(),
-                &[],
-            )?,
-            &[
-                token_program.clone().to_account_info(),
-                dest_token_account_info.to_account_info().clone(),
-                ctx.accounts.creator.to_account_info().clone(),
-                ctx.accounts.global_authority.to_account_info().clone(),
-            ],
-            signer,
-        )?;
+            invoke_signed(
+                &spl_token::instruction::close_account(
+                    token_program.key,
+                    &dest_token_account_info.key(),
+                    ctx.accounts.creator.key,
+                    &ctx.accounts.global_authority.key(),
+                    &[],
+                )?,
+                &[
+                    token_program.clone().to_account_info(),
+                    dest_token_account_info.to_account_info().clone(),
+                    ctx.accounts.creator.to_account_info().clone(),
+                    ctx.accounts.global_authority.to_account_info().clone(),
+                ],
+                signer,
+            )?;
+        }
 
         Ok(())
     }
@@ -1805,6 +1837,13 @@ pub struct DelistNft<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub nft_mint: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
+
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Box<Account<'info, AuctionData>>,
 }
 
 #[derive(Accounts)]
@@ -2283,4 +2322,11 @@ pub struct CancelAuction<'info> {
     pub nft_mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
+
+    #[account(
+        mut,
+        seeds = [SELL_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub sell_data_info: Account<'info, SellData>,
 }

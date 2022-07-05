@@ -790,6 +790,11 @@ export const createDelistNftTx = async (
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
         MARKETPLACE_PROGRAM_ID
     );
+    
+    const [auctionData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
 
     let { instructions, destinationAccounts } = await getATokenAccountsNeedCreate(
         connection,
@@ -814,6 +819,7 @@ export const createDelistNftTx = async (
             destNftTokenAccount: destinationAccounts[0],
             nftMint: mint,
             tokenProgram: TOKEN_PROGRAM_ID,
+            auctionDataInfo: auctionData,
         },
         instructions: [],
         signers: [],
@@ -1482,6 +1488,11 @@ export const createCancelAuctionTx = async (
         MARKETPLACE_PROGRAM_ID,
     );
 
+    const [sellData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID
+    );
+
     let { instructions, destinationAccounts } = await getATokenAccountsNeedCreate(
         connection,
         userAddress,
@@ -1507,6 +1518,7 @@ export const createCancelAuctionTx = async (
             destNftTokenAccount,
             nftMint: mint,
             tokenProgram: TOKEN_PROGRAM_ID,
+            sellDataInfo: sellData,
         },
         instructions: [],
         signers: [],
