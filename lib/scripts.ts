@@ -883,6 +883,11 @@ export const createPurchaseTx = async (
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
         MARKETPLACE_PROGRAM_ID
     );
+    
+    const [auctionData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
 
     const [buyerUserPool, buyer_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(USER_DATA_SEED), userAddress.toBuffer()],
@@ -955,6 +960,7 @@ export const createPurchaseTx = async (
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             tokenMetadataProgram: METAPLEX,
+            auctionDataInfo: auctionData,
         },
         instructions: [],
         signers: [],
@@ -1089,6 +1095,11 @@ export const createAcceptOfferTx = async (
         [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
         MARKETPLACE_PROGRAM_ID
     );
+    
+    const [auctionData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(AUCTION_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID,
+    );
 
     const [offerData, offer_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(OFFER_DATA_SEED), mint.toBuffer(), buyer.toBuffer()],
@@ -1178,6 +1189,7 @@ export const createAcceptOfferTx = async (
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             tokenMetadataProgram: METAPLEX,
+            auctionDataInfo: auctionData,
         },
         instructions: [],
         signers: [],
@@ -1308,6 +1320,11 @@ export const createPlaceBidTx = async (
         MARKETPLACE_PROGRAM_ID
     );
 
+    const [sellData, _] = await PublicKey.findProgramAddress(
+        [Buffer.from(SELL_DATA_SEED), mint.toBuffer()],
+        MARKETPLACE_PROGRAM_ID
+    );
+
     const [escrowVault, escrow_bump] = await PublicKey.findProgramAddress(
         [Buffer.from(ESCROW_VAULT_SEED)],
         MARKETPLACE_PROGRAM_ID,
@@ -1331,6 +1348,7 @@ export const createPlaceBidTx = async (
             escrowVault,
             outBidder,
             systemProgram: SystemProgram.programId,
+            sellDataInfo: sellData,
         },
         instructions: [],
         signers: [],

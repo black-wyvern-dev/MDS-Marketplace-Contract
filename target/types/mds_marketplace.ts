@@ -503,6 +503,11 @@ export type MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -802,6 +807,11 @@ export type MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -972,6 +982,11 @@ export type MdsMarketplace = {
         {
           "name": "systemProgram",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
           "isSigner": false
         }
       ],
@@ -1967,6 +1982,11 @@ export const IDL: MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -2266,6 +2286,11 @@ export const IDL: MdsMarketplace = {
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -2436,6 +2461,11 @@ export const IDL: MdsMarketplace = {
         {
           "name": "systemProgram",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
           "isSigner": false
         }
       ],

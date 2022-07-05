@@ -503,6 +503,11 @@
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -802,6 +807,11 @@
           "name": "tokenMetadataProgram",
           "isMut": false,
           "isSigner": false
+        },
+        {
+          "name": "auctionDataInfo",
+          "isMut": true,
+          "isSigner": false
         }
       ],
       "args": [
@@ -972,6 +982,11 @@
         {
           "name": "systemProgram",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "sellDataInfo",
+          "isMut": true,
           "isSigner": false
         }
       ],

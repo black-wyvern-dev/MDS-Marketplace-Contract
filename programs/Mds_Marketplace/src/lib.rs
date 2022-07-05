@@ -425,6 +425,7 @@ pub mod mds_marketplace {
     ) -> Result<()> {
         // By Token should be zero or one
         let sell_data_info = &mut ctx.accounts.sell_data_info;
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
         let buyer_user_pool = &mut ctx.accounts.buyer_user_pool;
         let seller_user_pool = &mut ctx.accounts.seller_user_pool;
 
@@ -435,6 +436,18 @@ pub mod mds_marketplace {
             ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
             MarketplaceError::InvalidNFTDataAcount
         );
+        // Assert NFT Pubkey with Auction Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        if auction_data_info.status == 3 {
+            // Assert Creator Pubkey is same with the Auction Data Creator
+            require!(
+                ctx.accounts.seller.key().eq(&auction_data_info.creator),
+                MarketplaceError::CreatorAccountMismatch
+            );
+        }
 
         // Get Collection address from Metadata
         let mint_metadata = &mut &ctx.accounts.mint_metadata;
@@ -473,6 +486,9 @@ pub mod mds_marketplace {
         );
 
         sell_data_info.active = 0;
+        if auction_data_info.status == 3 {
+            auction_data_info.status = 0;
+        }
 
         let nft_token_account_info = &mut &ctx.accounts.user_nft_token_account;
         let dest_nft_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
@@ -786,6 +802,7 @@ pub mod mds_marketplace {
         escrow_bump: u8,
     ) -> Result<()> {
         let sell_data_info = &mut ctx.accounts.sell_data_info;
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
         let buyer_user_pool = &mut ctx.accounts.buyer_user_pool;
         let seller_user_pool = &mut ctx.accounts.seller_user_pool;
 
@@ -794,6 +811,19 @@ pub mod mds_marketplace {
             ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
             MarketplaceError::InvalidNFTDataAcount
         );
+
+        // Assert NFT Pubkey with Auction Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&auction_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        if auction_data_info.status == 3 {
+            // Assert Creator Pubkey is same with the Auction Data Creator
+            require!(
+                ctx.accounts.seller.key().eq(&auction_data_info.creator),
+                MarketplaceError::CreatorAccountMismatch
+            );
+        }
 
         // Get Collection address from Metadata
         let mint_metadata = &mut &ctx.accounts.mint_metadata;
@@ -862,6 +892,10 @@ pub mod mds_marketplace {
 
         offer_data_info.active = 0;
         sell_data_info.active = 0;
+        
+        if auction_data_info.status == 3 {
+            auction_data_info.status = 0;
+        }
 
         require!(
             offer_data_info.offer_price <= buyer_user_pool.escrow_sol_balance,
@@ -1101,6 +1135,7 @@ pub mod mds_marketplace {
         price: u64,
     ) -> Result<()> {
         let auction_data_info = &mut ctx.accounts.auction_data_info;
+        let sell_data_info = &mut ctx.accounts.sell_data_info;
 
         let timestamp = Clock::get()?.unix_timestamp;
         msg!("Place Date: {}", timestamp);
@@ -1144,6 +1179,19 @@ pub mod mds_marketplace {
             !ctx.accounts.bidder.key().eq(&auction_data_info.creator),
             MarketplaceError::BidFromAuctionCreator
         );
+
+        // Assert NFT Pubkey with Sell Data PDA Mint
+        require!(
+            ctx.accounts.nft_mint.key().eq(&sell_data_info.mint),
+            MarketplaceError::InvalidNFTDataAcount
+        );
+        if sell_data_info.active == 1 {
+            // Assert NFT seller is payer
+            require!(
+                auction_data_info.creator.eq(&sell_data_info.seller),
+                MarketplaceError::SellerMismatch
+            );
+        }
 
         msg!(
             "Mint: {:?}, Bidder: {:?}",
@@ -1190,6 +1238,7 @@ pub mod mds_marketplace {
         if auction_data_info.status == 3 {
             auction_data_info.status = 1;
             auction_data_info.start_date = timestamp;
+            sell_data_info.active = 0;
         }
 
         Ok(())
@@ -1930,6 +1979,13 @@ pub struct PurchaseNft<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
     pub token_metadata_program: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Box<Account<'info, AuctionData>>,
 }
 
 #[derive(Accounts)]
@@ -2091,6 +2147,13 @@ pub struct AcceptOffer<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(constraint = token_metadata_program.key == &metaplex_token_metadata::ID)]
     pub token_metadata_program: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Box<Account<'info, AuctionData>>,
 }
 
 #[derive(Accounts)]
@@ -2185,6 +2248,13 @@ pub struct PlaceBid<'info> {
     pub out_bidder: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
+
+    #[account(
+        mut,
+        seeds = [SELL_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub sell_data_info: Box<Account<'info, SellData>>,
 }
 
 #[derive(Accounts)]
