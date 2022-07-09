@@ -153,7 +153,7 @@ pub mod mds_marketplace {
 
         // Assert Reserved Or Not Started Auction
         require!(
-            auction_data_info.status == 0 || auction_data_info.status == 3,
+            auction_data_info.status != 1,
             MarketplaceError::ListingNotAvailable
         );
 
@@ -212,7 +212,7 @@ pub mod mds_marketplace {
         let token_program = &mut &ctx.accounts.token_program;
 
         // Transfer NFT only Not in Reserved Auction
-        if auction_data_info.status == 0 {
+        if auction_data_info.status != 3 {
             // Assert NFT is in user Account
             require!(
                 token_account_info.amount == 1,
@@ -359,6 +359,7 @@ pub mod mds_marketplace {
         _sell_bump: u8,
     ) -> Result<()> {
         let sell_data_info = &mut ctx.accounts.sell_data_info;
+        let auction_data_info = &mut ctx.accounts.auction_data_info;
         msg!("Mint: {:?}", sell_data_info.mint);
 
         // Assert NFT Pubkey with Sell Data PDA Mint
@@ -373,8 +374,18 @@ pub mod mds_marketplace {
         );
         // Assert Already Delisted NFT
         require!(sell_data_info.active == 1, MarketplaceError::NotListedNFT);
+        if auction_data_info.status == 3 {
+            // Assert Creator Pubkey is same with the Auction Data Creator
+            require!(
+                ctx.accounts.owner.key().eq(&auction_data_info.creator),
+                MarketplaceError::CreatorAccountMismatch
+            );
+        }
 
         sell_data_info.active = 0;
+        if auction_data_info.status == 3 {
+            auction_data_info.status = 0;
+        }
 
         let token_account_info = &mut &ctx.accounts.user_token_account;
         let dest_token_account_info = &mut &ctx.accounts.dest_nft_token_account;
@@ -1773,6 +1784,13 @@ pub struct TransferFromVault<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub nft_mint: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
+
+    #[account(
+        mut,
+        seeds = [AUCTION_DATA_SEED.as_ref(), nft_mint.key().to_bytes().as_ref()],
+        bump,
+    )]
+    pub auction_data_info: Account<'info, AuctionData>,
 }
 
 #[derive(Accounts)]
